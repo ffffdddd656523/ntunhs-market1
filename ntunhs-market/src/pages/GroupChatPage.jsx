@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { SendIcon, UsersIcon } from '../components/Icons';
 import { Avatar } from '../components/Common';
 import { GROUP_MSGS_INIT } from '../data';
@@ -13,8 +13,8 @@ export default function GroupChatPage() {
     if (!msg.trim()) return;
     const newMsg = {
       id: "g" + Date.now(),
-      sender: "我",
-      avatar: "我",
+      sender: "??,
+      avatar: "??,
       color: "#0ea5e9",
       text: msg,
       time: new Date().toLocaleTimeString("zh-TW", {hour:"2-digit", minute:"2-digit"}),
@@ -36,18 +36,17 @@ export default function GroupChatPage() {
           <UsersIcon/>
         </div>
         <div>
-          <div style={{fontWeight:800, fontSize:16, color:"#1e293b"}}>北護大群</div>
-          <div style={{fontSize:12, color:"#64748b"}}>北護 Market 公開討論群組 · 全校學生皆可參與</div>
+          <div style={{fontWeight:800, fontSize:16, color:"#1e293b"}}>?風憭抒黎</div>
+          <div style={{fontSize:12, color:"#64748b"}}>?風 Market ?祇?閮?蝢斤? 繚 ?冽摮貊????</div>
         </div>
         <div style={{marginLeft:"auto", background:"#dcfce7", color:"#16a34a", fontSize:12, fontWeight:600, padding:"4px 10px", borderRadius:99}}>
-          ● 138 人在線
-        </div>
+          ??138 鈭箏蝺?        </div>
       </div>
 
       {/* Messages */}
       <div style={{background:"#f8fafc", padding:"24px", height:460, overflowY:"auto", display:"flex", flexDirection:"column", gap:16}}>
         <div style={{textAlign:"center"}}>
-          <span style={{background:"#e2e8f0", color:"#64748b", fontSize:12, padding:"4px 12px", borderRadius:99}}>今天</span>
+          <span style={{background:"#e2e8f0", color:"#64748b", fontSize:12, padding:"4px 12px", borderRadius:99}}>隞予</span>
         </div>
         {messages.map(m => (
           <div key={m.id} style={{display:"flex", flexDirection:m.isMe?"row-reverse":"row", gap:10, alignItems:"flex-end"}}>
@@ -69,18 +68,17 @@ export default function GroupChatPage() {
         <input
           value={msg}
           onChange={e=>setMsg(e.target.value)}
-          placeholder="輸入訊息，傳送給北護全體同學..."
+          placeholder="頛詨閮嚗?策?風?券??飛..."
           style={{flex:1, padding:"11px 14px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none"}}
         />
         <button type="submit" style={{background:"linear-gradient(135deg,#0ea5e9,#0284c7)", color:"#fff", border:"none", padding:"0 20px", borderRadius:10, cursor:"pointer", display:"flex", alignItems:"center", gap:6, fontWeight:600, whiteSpace:"nowrap"}}>
-          <SendIcon/>傳送
-        </button>
+          <SendIcon/>?喲?        </button>
       </form>
 
       {/* Notice */}
       <div style={{marginTop:14, background:"#fffbeb", border:"1px solid #fde68a", borderRadius:12, padding:"12px 16px", fontSize:13, color:"#92400e"}}>
-        ⚠️ 請遵守北護校規，禁止發布違法或不當內容。
-      </div>
+        ?? 隢摰?霅瑟閬?蝳迫?澆??????嗅摰嫘?      </div>
     </div>
   );
 }
+

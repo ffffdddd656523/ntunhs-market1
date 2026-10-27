@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
@@ -59,7 +59,7 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case "home":
-       return <HomePage setPage={setPage} onViewProduct={goToProduct} favorites={favorites} toggleFav={toggleFav} />;
+       return <HomePage setPage={setPage} onViewProduct={goToProduct} favorites={favorites} toggleFav={toggleFav} favorites={favorites} toggleFav={toggleFav} />;
       case "products":
         return (
           <ProductListPage
@@ -113,7 +113,7 @@ export default function App() {
           )
           : <LoginPage setPage={setPage} onLogin={onLogin} />;
       default:
-        return <HomePage setPage={setPage} onViewProduct={goToProduct} />;
+        return <HomePage setPage={setPage} onViewProduct={goToProduct} favorites={favorites} toggleFav={toggleFav} />;
     }
   };
 
@@ -133,3 +133,4 @@ export default function App() {
     </div>
   );
 }
+
