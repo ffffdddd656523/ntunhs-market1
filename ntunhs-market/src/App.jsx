@@ -59,7 +59,7 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case "home":
-        return <HomePage setPage={setPage} onViewProduct={goToProduct} />;
+       return <HomePage setPage={setPage} onViewProduct={goToProduct} favorites={favorites} toggleFav={toggleFav} />;
       case "products":
         return (
           <ProductListPage

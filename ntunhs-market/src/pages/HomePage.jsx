@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { SearchIcon, ShoppingBagIcon, BriefcaseIcon, RefreshIcon, FilterIcon, MessageCircleIcon, ImageIcon } from '../components/Icons';
 import { ProductCard } from '../components/Common';
+import { PRODUCTS } from '../data';
 
-export default function HomePage({ setPage, products, favorites, toggleFav, showProduct }) {
-  const [searchQuery, setSearchQuery] = useState("");
+export default function HomePage({ setPage, favorites, toggleFav, onViewProduct }) {  const [searchQuery, setSearchQuery] = useState("");
 
   const featuredCats = [
     {label:"商品分類", icon:<ShoppingBagIcon/>, color:"#0ea5e9", bg:"#e0f2fe", border:"#0ea5e9", page:"products", desc:"二手書、彩妝、衣服、生活用品"},
@@ -18,7 +18,7 @@ export default function HomePage({ setPage, products, favorites, toggleFav, show
     {icon:<MessageCircleIcon/>, color:"#f59e0b", bg:"#fef3c7", title:"聊天室聯絡", desc:"可直接聯絡賣家，資訊不會被洗掉"},
   ];
 
-  const latest = products.slice(0, 6);
+  const latest = PRODUCTS.slice(0, 6);
 
   return (
     <div>
@@ -91,7 +91,7 @@ export default function HomePage({ setPage, products, favorites, toggleFav, show
         </div>
         <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(260px,1fr))", gap:20}}>
           {latest.map(p => (
-            <ProductCard key={p.id} product={p} onClick={showProduct} onFavorite={toggleFav} isFav={favorites.has(p.id)}/>
+            <ProductCard key={p.id} product={p} onClick={onViewProduct}onFavorite={toggleFav} isFav={favorites.has(p.id)}/>
           ))}
         </div>
       </section>
