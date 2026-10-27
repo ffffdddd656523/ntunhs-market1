@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { SearchIcon, FilterIcon } from '../components/Icons';
 import { ProductCard } from '../components/Common';
+import { PRODUCTS } from '../data';
 
-export default function ProductListPage({ products, favorites, toggleFav, showProduct }) {
-  const [search, setSearch] = useState("");
+export default function ProductListPage({ favorites, toggleFav, onView }) {  const [search, setSearch] = useState("");
   const [cat, setCat] = useState("all");
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
   const [sort, setSort] = useState("latest");
 
-  let filtered = products.filter(p => {
+  let filtered = PRODUCTS.filter(p => {
     if (cat !== "all" && p.category !== cat) return false;
     if (search && !p.title.includes(search) && !p.description.includes(search)) return false;
     if (priceMin && p.price < +priceMin) return false;
@@ -67,7 +67,7 @@ export default function ProductListPage({ products, favorites, toggleFav, showPr
           ) : (
             <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(240px,1fr))", gap:18}}>
               {filtered.map(p => (
-                <ProductCard key={p.id} product={p} onClick={showProduct} onFavorite={toggleFav} isFav={favorites.has(p.id)}/>
+                <ProductCard key={p.id} product={p} onClick={onView} onFavorite={toggleFav} isFav={favorites.has(p.id)}/>
               ))}
             </div>
           )}
