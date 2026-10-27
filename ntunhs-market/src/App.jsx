@@ -87,7 +87,7 @@ export default function App() {
         return <CreatePostPage setPage={setPage} isLoggedIn={!!user} />;
       case "chat":
         return <ChatPage />;
-      case "group":
+      case "group-chat":
         return <GroupChatPage />;
       case "visual-search":
         return (
