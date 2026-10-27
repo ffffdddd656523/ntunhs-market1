@@ -1,5 +1,4 @@
 ﻿import { useState } from 'react';
-import { PRODUCTS } from '../data';
 import { SearchIcon, FilterIcon } from '../components/Icons';
 import { ProductCard } from '../components/Common';
 import { PRODUCTS } from '../data';
