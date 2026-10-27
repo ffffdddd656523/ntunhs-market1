@@ -51,7 +51,7 @@ export default function GroupChatPage() {
         </div>
         {messages.map(m => (
           <div key={m.id} style={{display:"flex", flexDirection:m.isMe?"row-reverse":"row", gap:10, alignItems:"flex-end"}}>
-            {!m.isMe && <Avatar name={m.avatar} color={m.color} size={36}/>}
+            {!m.isMe && <Avatar name={m.sender} color={m.color} size={36}/>}
             <div style={{maxWidth:"68%"}}>
               {!m.isMe && <div style={{fontSize:12, color:"#64748b", marginBottom:4, marginLeft:2}}>{m.sender}</div>}
               <div style={{padding:"10px 14px", borderRadius:m.isMe?"16px 16px 4px 16px":"16px 16px 16px 4px", background:m.isMe?"linear-gradient(135deg,#0ea5e9,#0284c7)":"#fff", color:m.isMe?"#fff":"#1e293b", fontSize:14, lineHeight:1.6, boxShadow:"0 1px 4px rgba(0,0,0,.08)"}}>
