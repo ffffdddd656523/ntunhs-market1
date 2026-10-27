@@ -2,7 +2,6 @@
 import { PRODUCTS } from '../data';
 import { SearchIcon, FilterIcon } from '../components/Icons';
 import { ProductCard } from '../components/Common';
-import { PRODUCTS } from '../data';
 
 export default function ProductListPage({ favorites, toggleFav, onView }) {  const [search, setSearch] = useState("");
   const [cat, setCat] = useState("all");
