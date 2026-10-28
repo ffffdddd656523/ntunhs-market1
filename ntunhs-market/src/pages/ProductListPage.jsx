@@ -11,6 +11,7 @@ export default function ProductListPage({ favorites, toggleFav, onView }) {
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
   const [sort, setSort] = useState("latest");
+  const [showSold, setShowSold] = useState(true);
   const [firestoreProducts, setFirestoreProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,15 +32,18 @@ export default function ProductListPage({ favorites, toggleFav, onView }) {
     if (search && !p.title?.includes(search) && !p.description?.includes(search)) return false;
     if (priceMin && p.price < +priceMin) return false;
     if (priceMax && p.price > +priceMax) return false;
+    if (!showSold && p.status === 'sold') return false;
     return true;
   });
   if (sort === "price-low") filtered = [...filtered].sort((a,b) => a.price - b.price);
   if (sort === "price-high") filtered = [...filtered].sort((a,b) => b.price - a.price);
 
+  const soldCount = allProducts.filter(p => p.status === 'sold').length;
+
   return (
     <div style={{maxWidth:1200, margin:"0 auto", padding:"32px 20px"}}>
       <h1 style={{fontSize:26, fontWeight:800, color:"#1e293b", marginBottom:6}}>商品分類</h1>
-      <p style={{color:"#64748b", marginBottom:28}}>瀏覽二手書、彩妝、衣服與生活用品</p>
+      <p style={{color:"#64748b", marginBottom:28}}>瀏覽二手書、彩妝、衣服、生活用品與綜合物品</p>
 
       <div style={{display:"flex", flexWrap:"wrap", gap:24, alignItems:"flex-start"}}>
         {/* Sidebar Filter */}
@@ -59,6 +63,7 @@ export default function ProductListPage({ favorites, toggleFav, onView }) {
             <option value="彩妝">彩妝</option>
             <option value="衣服">衣服</option>
             <option value="生活用品">生活用品</option>
+            <option value="綜合物品">綜合物品</option>
           </select>
           <label style={{fontSize:13, color:"#475569", display:"block", marginBottom:6}}>價格區間</label>
           <div style={{display:"flex", gap:8, marginBottom:18}}>
@@ -66,11 +71,20 @@ export default function ProductListPage({ favorites, toggleFav, onView }) {
             <input type="number" placeholder="最高" value={priceMax} onChange={e=>setPriceMax(e.target.value)} style={{width:"50%", padding:"8px", border:"1px solid #e2e8f0", borderRadius:8, fontSize:13, outline:"none"}}/>
           </div>
           <label style={{fontSize:13, color:"#475569", display:"block", marginBottom:6}}>排序</label>
-          <select value={sort} onChange={e=>setSort(e.target.value)} style={{width:"100%", padding:"8px 12px", border:"1px solid #e2e8f0", borderRadius:8, fontSize:13, outline:"none"}}>
+          <select value={sort} onChange={e=>setSort(e.target.value)} style={{width:"100%", padding:"8px 12px", border:"1px solid #e2e8f0", borderRadius:8, marginBottom:18, fontSize:13, outline:"none"}}>
             <option value="latest">最新</option>
             <option value="price-low">價格低到高</option>
             <option value="price-high">價格高到低</option>
           </select>
+          {soldCount > 0 && (
+            <>
+              <label style={{fontSize:13, color:"#475569", display:"block", marginBottom:6}}>已售出商品</label>
+              <label style={{display:"flex", alignItems:"center", gap:8, fontSize:13, color:"#475569", cursor:"pointer"}}>
+                <input type="checkbox" checked={showSold} onChange={e=>setShowSold(e.target.checked)} style={{width:15, height:15}}/>
+                顯示已售出（{soldCount}）
+              </label>
+            </>
+          )}
         </aside>
 
         {/* Product Grid */}

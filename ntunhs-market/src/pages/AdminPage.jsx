@@ -4,6 +4,13 @@ import { db } from '../firebase';
 
 const ADMIN_EMAIL = 'admin@ntunhs.edu.tw';
 
+// 各 collection 的狀態標籤
+const STATUS_LABELS = {
+  products: { sold: '已售出', active: '在售中',  toggleTo: 'sold',   toggleLabel: '✅ 標記售出',  unToggleLabel: '↩️ 取消售出' },
+  jobs:     { sold: '已填滿', active: '招募中',   toggleTo: 'sold',   toggleLabel: '✅ 標記填滿',  unToggleLabel: '↩️ 取消填滿' },
+  courses:  { sold: '已換課', active: '尋找中',   toggleTo: 'sold',   toggleLabel: '✅ 標記換課',  unToggleLabel: '↩️ 取消換課' },
+};
+
 export default function AdminPage({ user }) {
   const [tab, setTab] = useState('products');
   const [data, setData] = useState({ products: [], jobs: [], courses: [] });
@@ -11,6 +18,7 @@ export default function AdminPage({ user }) {
   const [editingId, setEditingId] = useState(null);
   const [editImage, setEditImage] = useState('');
   const [saving, setSaving] = useState(false);
+  const [toggling, setToggling] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [saved, setSaved] = useState(null);
   const [error, setError] = useState(null);
@@ -49,6 +57,23 @@ export default function AdminPage({ user }) {
     } catch (e) {
       alert('刪除失敗：' + e.message);
     }
+  };
+
+  const handleToggleStatus = async (item) => {
+    const newStatus = item.status === 'sold' ? null : 'sold';
+    setToggling(item.id);
+    try {
+      await updateDoc(doc(db, item._col, item.id), { status: newStatus });
+      setData(prev => ({
+        ...prev,
+        [item._col]: prev[item._col].map(p =>
+          p.id === item.id ? { ...p, status: newStatus } : p
+        ),
+      }));
+    } catch (e) {
+      alert('更新狀態失敗：' + e.message);
+    }
+    setToggling(null);
   };
 
   const startEdit = (item) => {
@@ -102,6 +127,7 @@ export default function AdminPage({ user }) {
 
   const currentItems = data[tab] || [];
   const total = data.products.length + data.jobs.length + data.courses.length;
+  const sl = STATUS_LABELS[tab];
 
   return (
     <div style={{ maxWidth:960, margin:'0 auto', padding:'32px 20px' }}>
@@ -159,77 +185,106 @@ export default function AdminPage({ user }) {
         </div>
       ) : (
         <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-          {currentItems.map(item => (
-            <div
-              key={item.id}
-              style={{
-                background:'#fff', borderRadius:14, padding:'18px 22px',
-                boxShadow: saved===item.id ? '0 0 0 2px #22c55e' : '0 1px 8px rgba(0,0,0,.07)',
-                display:'flex', gap:16, alignItems:'flex-start', flexWrap:'wrap',
-              }}
-            >
-              {item.image && (
-                <img
-                  src={editingId===item.id && editImage ? editImage : item.image}
-                  alt={item.title || ''}
-                  style={{ width:80, height:80, objectFit:'cover', borderRadius:10, flexShrink:0, border:'1.5px solid #e2e8f0' }}
-                  onError={e => { e.target.style.display='none'; }}
-                />
-              )}
-              <div style={{ flex:1, minWidth:200 }}>
-                <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:5, flexWrap:'wrap' }}>
-                  <span style={{ fontWeight:700, fontSize:15, color:'#1e293b' }}>{item.title}</span>
-                  {item.price && <span style={{ fontSize:13, fontWeight:700, color:'#0ea5e9' }}>NT$ {item.price}</span>}
-                  {item.category && <span style={{ fontSize:11, background:'#f1f5f9', color:'#64748b', padding:'2px 8px', borderRadius:6 }}>{item.category}</span>}
-                  {saved===item.id && <span style={{ fontSize:12, color:'#22c55e', fontWeight:600 }}>✓ 已儲存</span>}
-                </div>
-                <div style={{ fontSize:12, color:'#94a3b8', marginBottom:6 }}>
-                  發布者：{item.authorName || item.poster || '—'}
-                  {fmtDate(item.createdAt || item.date) && <span>　{fmtDate(item.createdAt || item.date)}</span>}
-                </div>
-                {item.description && (
-                  <p style={{ fontSize:13, color:'#64748b', marginBottom:8, lineHeight:1.5 }}>
-                    {item.description.length > 80 ? item.description.slice(0,80)+'…' : item.description}
-                  </p>
+          {currentItems.map(item => {
+            const isSold = item.status === 'sold';
+            return (
+              <div
+                key={item.id}
+                style={{
+                  background:'#fff', borderRadius:14, padding:'18px 22px',
+                  boxShadow: saved===item.id ? '0 0 0 2px #22c55e' : '0 1px 8px rgba(0,0,0,.07)',
+                  display:'flex', gap:16, alignItems:'flex-start', flexWrap:'wrap',
+                  borderLeft: isSold ? '4px solid #ef4444' : '4px solid transparent',
+                  opacity: isSold ? 0.85 : 1,
+                }}
+              >
+                {item.image && (
+                  <div style={{ position:'relative', flexShrink:0 }}>
+                    <img
+                      src={editingId===item.id && editImage ? editImage : item.image}
+                      alt={item.title || ''}
+                      style={{ width:80, height:80, objectFit:'cover', borderRadius:10, border:'1.5px solid #e2e8f0' }}
+                      onError={e => { e.target.style.display='none'; }}
+                    />
+                    {isSold && (
+                      <div style={{ position:'absolute', inset:0, borderRadius:10, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                        <span style={{ color:'#fff', fontSize:10, fontWeight:800 }}>{sl.sold}</span>
+                      </div>
+                    )}
+                  </div>
                 )}
-                {editingId===item.id && (
-                  <div style={{ marginTop:8 }}>
-                    <div style={{ fontSize:12, color:'#475569', fontWeight:600, marginBottom:6 }}>修改圖片網址：</div>
-                    <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                      <input
-                        value={editImage}
-                        onChange={e => setEditImage(e.target.value)}
-                        placeholder="https://images.unsplash.com/..."
-                        autoFocus
-                        style={{ flex:1, minWidth:240, padding:'8px 12px', border:'1.5px solid #0ea5e9', borderRadius:8, fontSize:13, outline:'none' }}
-                      />
+                <div style={{ flex:1, minWidth:200 }}>
+                  <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:5, flexWrap:'wrap' }}>
+                    <span style={{ fontWeight:700, fontSize:15, color:'#1e293b' }}>{item.title}</span>
+                    {item.price && <span style={{ fontSize:13, fontWeight:700, color: isSold ? '#94a3b8' : '#0ea5e9', textDecoration: isSold ? 'line-through' : 'none' }}>NT$ {item.price}</span>}
+                    {item.category && <span style={{ fontSize:11, background:'#f1f5f9', color:'#64748b', padding:'2px 8px', borderRadius:6 }}>{item.category}</span>}
+                    {isSold && (
+                      <span style={{ fontSize:11, background:'#fef2f2', color:'#ef4444', fontWeight:700, padding:'2px 8px', borderRadius:6 }}>{sl.sold}</span>
+                    )}
+                    {saved===item.id && <span style={{ fontSize:12, color:'#22c55e', fontWeight:600 }}>✓ 已儲存</span>}
+                  </div>
+                  <div style={{ fontSize:12, color:'#94a3b8', marginBottom:6 }}>
+                    發布者：{item.authorName || item.poster || '—'}
+                    {fmtDate(item.createdAt || item.date) && <span>　{fmtDate(item.createdAt || item.date)}</span>}
+                  </div>
+                  {item.description && (
+                    <p style={{ fontSize:13, color:'#64748b', marginBottom:8, lineHeight:1.5 }}>
+                      {item.description.length > 80 ? item.description.slice(0,80)+'…' : item.description}
+                    </p>
+                  )}
+                  {editingId===item.id && (
+                    <div style={{ marginTop:8 }}>
+                      <div style={{ fontSize:12, color:'#475569', fontWeight:600, marginBottom:6 }}>修改圖片網址：</div>
+                      <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                        <input
+                          value={editImage}
+                          onChange={e => setEditImage(e.target.value)}
+                          placeholder="https://images.unsplash.com/..."
+                          autoFocus
+                          style={{ flex:1, minWidth:240, padding:'8px 12px', border:'1.5px solid #0ea5e9', borderRadius:8, fontSize:13, outline:'none' }}
+                        />
+                        <button
+                          onClick={() => saveEdit(item)}
+                          disabled={saving || !editImage.trim()}
+                          style={{ padding:'8px 18px', background:'linear-gradient(135deg,#0ea5e9,#0284c7)', color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontWeight:700, fontSize:13 }}
+                        >{saving ? '儲存中...' : '✓ 儲存'}</button>
+                        <button
+                          onClick={() => setEditingId(null)}
+                          style={{ padding:'8px 12px', background:'#f1f5f9', color:'#64748b', border:'none', borderRadius:8, cursor:'pointer', fontSize:13 }}
+                        >取消</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {editingId!==item.id && (
+                  <div style={{ display:'flex', flexDirection:'column', gap:8, flexShrink:0 }}>
+                    <button
+                      onClick={() => handleToggleStatus(item)}
+                      disabled={toggling === item.id}
+                      style={{
+                        padding:'8px 14px', border:'none', borderRadius:8, cursor:'pointer',
+                        fontWeight:600, fontSize:13,
+                        background: isSold ? '#fff7ed' : '#f0fdf4',
+                        color: isSold ? '#ea580c' : '#16a34a',
+                      }}
+                    >
+                      {toggling === item.id ? '更新中...' : (isSold ? sl.unToggleLabel : sl.toggleLabel)}
+                    </button>
+                    <div style={{ display:'flex', gap:8 }}>
                       <button
-                        onClick={() => saveEdit(item)}
-                        disabled={saving || !editImage.trim()}
-                        style={{ padding:'8px 18px', background:'linear-gradient(135deg,#0ea5e9,#0284c7)', color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontWeight:700, fontSize:13 }}
-                      >{saving ? '儲存中...' : '✓ 儲存'}</button>
+                        onClick={() => startEdit(item)}
+                        style={{ flex:1, padding:'8px 10px', background:'#f8fafc', border:'1.5px solid #e2e8f0', borderRadius:8, cursor:'pointer', fontWeight:600, fontSize:12, color:'#475569' }}
+                      >✏️ 修改圖片</button>
                       <button
-                        onClick={() => setEditingId(null)}
-                        style={{ padding:'8px 12px', background:'#f1f5f9', color:'#64748b', border:'none', borderRadius:8, cursor:'pointer', fontSize:13 }}
-                      >取消</button>
+                        onClick={() => setConfirmDelete(item)}
+                        style={{ flex:1, padding:'8px 10px', background:'#fff1f2', border:'1.5px solid #fecdd3', borderRadius:8, cursor:'pointer', fontWeight:600, fontSize:12, color:'#e11d48' }}
+                      >🗑️ 刪除</button>
                     </div>
                   </div>
                 )}
               </div>
-              {editingId!==item.id && (
-                <div style={{ display:'flex', gap:8, flexShrink:0 }}>
-                  <button
-                    onClick={() => startEdit(item)}
-                    style={{ padding:'8px 14px', background:'#f8fafc', border:'1.5px solid #e2e8f0', borderRadius:8, cursor:'pointer', fontWeight:600, fontSize:13, color:'#475569' }}
-                  >✏️ 修改圖片</button>
-                  <button
-                    onClick={() => setConfirmDelete(item)}
-                    style={{ padding:'8px 14px', background:'#fff1f2', border:'1.5px solid #fecdd3', borderRadius:8, cursor:'pointer', fontWeight:600, fontSize:13, color:'#e11d48' }}
-                  >🗑️ 刪除</button>
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
