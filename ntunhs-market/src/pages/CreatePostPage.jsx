@@ -1,10 +1,14 @@
 import { useState } from 'react';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 import { XIcon, UploadIcon } from '../components/Icons';
 
-export default function CreatePostPage({ setPage, isLoggedIn }) {
+export default function CreatePostPage({ setPage, isLoggedIn, user }) {
   const [form, setForm] = useState({type:"product", title:"", category:"", price:"", description:"", contact:""});
   const [img, setImg] = useState(null);
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleImg = e => {
     const f = e.target.files?.[0];
@@ -15,9 +19,31 @@ export default function CreatePostPage({ setPage, isLoggedIn }) {
     }
   };
 
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
-    setSubmitted(true);
+    setLoading(true);
+    setError("");
+    try {
+      const collectionName = form.type === "product" ? "products" : form.type === "job" ? "jobs" : "courses";
+      await addDoc(collection(db, collectionName), {
+        title: form.title,
+        category: form.category,
+        price: form.type === "product" ? Number(form.price) : null,
+        description: form.description,
+        contact: form.contact,
+        type: form.type,
+        image: img || null,
+        authorId: user?.uid || "",
+        authorName: user?.name || "",
+        authorEmail: user?.email || "",
+        createdAt: new Date().toISOString(),
+        likes: 0,
+      });
+      setSubmitted(true);
+    } catch (err) {
+      setError("發布失敗，請再試一次：" + err.message);
+    }
+    setLoading(false);
   };
 
   if (!isLoggedIn) return (
@@ -135,9 +161,15 @@ export default function CreatePostPage({ setPage, isLoggedIn }) {
           <input required value={form.contact} onChange={e=>setForm({...form,contact:e.target.value})} placeholder="例如：Email、手機號碼、Line ID" style={{width:"100%", padding:"11px 14px", border:"1px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", boxSizing:"border-box"}}/>
         </div>
 
+        {error && (
+          <div style={{background:"#fef2f2", border:"1px solid #fecaca", borderRadius:10, padding:"10px 14px", marginBottom:16, color:"#dc2626", fontSize:13}}>
+            {error}
+          </div>
+        )}
+
         <div style={{display:"flex", gap:12}}>
-          <button type="submit" style={{flex:1, background:"linear-gradient(135deg,#0ea5e9,#0284c7)", color:"#fff", border:"none", padding:"13px 0", borderRadius:12, fontWeight:700, fontSize:15, cursor:"pointer"}}>
-            發布貼文
+          <button type="submit" disabled={loading} style={{flex:1, background:"linear-gradient(135deg,#0ea5e9,#0284c7)", color:"#fff", border:"none", padding:"13px 0", borderRadius:12, fontWeight:700, fontSize:15, cursor:loading?"not-allowed":"pointer", opacity:loading?0.7:1}}>
+            {loading ? "發布中..." : "發布貼文"}
           </button>
           <button type="button" onClick={()=>setForm({type:"product",title:"",category:"",price:"",description:"",contact:""})} style={{padding:"13px 24px", borderRadius:12, border:"1.5px solid #e2e8f0", background:"#fff", color:"#475569", cursor:"pointer", fontWeight:600}}>
             重設

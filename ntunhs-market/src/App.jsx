@@ -1,4 +1,7 @@
-﻿import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from './firebase';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
@@ -19,6 +22,28 @@ export default function App() {
   const [favorites, setFavorites] = useState(new Set());
   const [selectedProduct, setSelectedProduct] = useState(null);
 
+  // 監聽 Firebase 登入狀態
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // 從 Firestore 取得完整用戶資料
+        try {
+          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+          if (userDoc.exists()) {
+            setUser({ uid: firebaseUser.uid, email: firebaseUser.email, ...userDoc.data() });
+          } else {
+            setUser({ uid: firebaseUser.uid, email: firebaseUser.email, name: firebaseUser.displayName || firebaseUser.email.split("@")[0] });
+          }
+        } catch {
+          setUser({ uid: firebaseUser.uid, email: firebaseUser.email, name: firebaseUser.displayName || firebaseUser.email.split("@")[0] });
+        }
+      } else {
+        setUser(null);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   const toggleFav = id => {
     setFavorites(prev => {
       const next = new Set(prev);
@@ -32,7 +57,8 @@ export default function App() {
     setPage("home");
   };
 
-  const onLogout = () => {
+  const onLogout = async () => {
+    await signOut(auth);
     setUser(null);
     setPage("home");
   };
@@ -44,22 +70,10 @@ export default function App() {
 
   const goToChat = () => setPage("chat");
 
-  const pageProps = {
-    setPage,
-    user,
-    isLoggedIn: !!user,
-    favorites,
-    toggleFav,
-    selectedProduct,
-    setSelectedProduct,
-    onLogin,
-    onLogout,
-  };
-
   const renderPage = () => {
     switch (page) {
       case "home":
-       return <HomePage setPage={setPage} onViewProduct={goToProduct} favorites={favorites} toggleFav={toggleFav} favorites={favorites} toggleFav={toggleFav} />;
+        return <HomePage setPage={setPage} onViewProduct={goToProduct} favorites={favorites} toggleFav={toggleFav} />;
       case "products":
         return (
           <ProductListPage
@@ -84,7 +98,7 @@ export default function App() {
       case "courses":
         return <CourseListPage />;
       case "create":
-        return <CreatePostPage setPage={setPage} isLoggedIn={!!user} />;
+        return <CreatePostPage setPage={setPage} isLoggedIn={!!user} user={user} />;
       case "chat":
         return <ChatPage />;
       case "group-chat":
@@ -133,4 +147,3 @@ export default function App() {
     </div>
   );
 }
-

@@ -1,22 +1,41 @@
 import { useState } from 'react';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile
+} from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 
-const DEPTS = ["護理學系","物理治療學系","職業治療學系","語言治療與聽力學系","醫學影像暨放射科學系","口腔衛生學系","健康照護管理學系","嬰幼兒保育系","文化事業發展學系"];
+const DEPTS = ["護理學系","物理治療學系","職業治療學系","語言治療與聽力學系","醫學影像暨放射科學系","口腔衛生學系","健康照護管理學系","嬰幼兒保育系","文化事業發展學系","資訊管理系"];
 
 export function LoginPage({ setPage, onLogin }) {
   const [form, setForm] = useState({email:"", password:""});
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
     if (!form.email.endsWith("@ntunhs.edu.tw")) {
       setError("請使用北護學校信箱（@ntunhs.edu.tw）登入");
       return;
     }
-    if (form.password.length < 6) {
-      setError("密碼至少需要 6 個字元");
-      return;
+    setLoading(true);
+    setError("");
+    try {
+      const result = await signInWithEmailAndPassword(auth, form.email, form.password);
+      const u = result.user;
+      onLogin({ uid: u.uid, email: u.email, name: u.displayName || u.email.split("@")[0] });
+    } catch (err) {
+      if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
+        setError("信箱或密碼錯誤，請重新輸入");
+      } else if (err.code === "auth/too-many-requests") {
+        setError("登入失敗次數過多，請稍後再試");
+      } else {
+        setError("登入失敗：" + err.message);
+      }
     }
-    onLogin({ email: form.email, name: form.email.split("@")[0] });
+    setLoading(false);
   };
 
   return (
@@ -66,9 +85,10 @@ export function LoginPage({ setPage, onLogin }) {
 
           <button
             type="submit"
-            style={{width:"100%", padding:"13px 0", background:"linear-gradient(135deg,#0ea5e9,#0284c7)", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:16, cursor:"pointer"}}
+            disabled={loading}
+            style={{width:"100%", padding:"13px 0", background:"linear-gradient(135deg,#0ea5e9,#0284c7)", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:16, cursor:loading?"not-allowed":"pointer", opacity:loading?0.7:1}}
           >
-            登入
+            {loading ? "登入中..." : "登入"}
           </button>
         </form>
 
@@ -94,6 +114,7 @@ export function RegisterPage({ setPage, onLogin }) {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({name:"", email:"", dept:"", year:"", password:"", confirm:""});
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleStep1 = e => {
     e.preventDefault();
@@ -101,11 +122,15 @@ export function RegisterPage({ setPage, onLogin }) {
       setError("請使用北護學校信箱（@ntunhs.edu.tw）");
       return;
     }
+    if (!form.name.trim()) {
+      setError("請輸入姓名");
+      return;
+    }
     setError("");
     setStep(2);
   };
 
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
     if (form.password !== form.confirm) {
       setError("兩次輸入的密碼不一致");
@@ -115,7 +140,32 @@ export function RegisterPage({ setPage, onLogin }) {
       setError("密碼至少需要 6 個字元");
       return;
     }
-    onLogin({ email: form.email, name: form.name, dept: form.dept, year: form.year });
+    setLoading(true);
+    setError("");
+    try {
+      const result = await createUserWithEmailAndPassword(auth, form.email, form.password);
+      const u = result.user;
+      // 設定顯示名稱
+      await updateProfile(u, { displayName: form.name });
+      // 儲存用戶資料到 Firestore
+      await setDoc(doc(db, "users", u.uid), {
+        name: form.name,
+        email: form.email,
+        dept: form.dept,
+        year: form.year,
+        createdAt: new Date().toISOString()
+      });
+      onLogin({ uid: u.uid, email: u.email, name: form.name, dept: form.dept, year: form.year });
+    } catch (err) {
+      if (err.code === "auth/email-already-in-use") {
+        setError("此信箱已被註冊，請直接登入");
+      } else if (err.code === "auth/weak-password") {
+        setError("密碼強度不足，請使用至少 6 個字元");
+      } else {
+        setError("註冊失敗：" + err.message);
+      }
+    }
+    setLoading(false);
   };
 
   return (
@@ -193,8 +243,8 @@ export function RegisterPage({ setPage, onLogin }) {
               <button type="button" onClick={()=>{setStep(1);setError("");}} style={{flex:1, padding:"13px 0", border:"1.5px solid #e2e8f0", background:"#fff", borderRadius:12, fontWeight:600, cursor:"pointer", color:"#475569"}}>
                 上一步
               </button>
-              <button type="submit" style={{flex:2, padding:"13px 0", background:"linear-gradient(135deg,#0ea5e9,#0284c7)", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:15, cursor:"pointer"}}>
-                完成註冊
+              <button type="submit" disabled={loading} style={{flex:2, padding:"13px 0", background:"linear-gradient(135deg,#0ea5e9,#0284c7)", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:15, cursor:loading?"not-allowed":"pointer", opacity:loading?0.7:1}}>
+                {loading ? "註冊中..." : "完成註冊"}
               </button>
             </div>
           </form>
