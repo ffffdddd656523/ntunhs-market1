@@ -1,15 +1,44 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, updateDoc, deleteDoc, doc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const ADMIN_EMAIL = 'admin@ntunhs.edu.tw';
 
-// 各 collection 的狀態標籤
 const STATUS_LABELS = {
-  products: { sold: '已售出', active: '在售中',  toggleTo: 'sold',   toggleLabel: '✅ 標記售出',  unToggleLabel: '↩️ 取消售出' },
-  jobs:     { sold: '已填滿', active: '招募中',   toggleTo: 'sold',   toggleLabel: '✅ 標記填滿',  unToggleLabel: '↩️ 取消填滿' },
-  courses:  { sold: '已換課', active: '尋找中',   toggleTo: 'sold',   toggleLabel: '✅ 標記換課',  unToggleLabel: '↩️ 取消換課' },
+  products: { sold: '已售出', active: '在售中',  toggleLabel: '✅ 標記售出',  unToggleLabel: '↩️ 取消售出' },
+  jobs:     { sold: '已填滿', active: '招募中',   toggleLabel: '✅ 標記填滿',  unToggleLabel: '↩️ 取消填滿' },
+  courses:  { sold: '已換課', active: '尋找中',   toggleLabel: '✅ 標記換課',  unToggleLabel: '↩️ 取消換課' },
 };
+
+// ─── 示範資料 ───────────────────────────────────────────
+const SEED_PRODUCTS = [
+  { image:"https://images.unsplash.com/photo-1544717305-2782549b5136?w=600", title:"護理學原理 第八版", price:350, category:"書籍", description:"九成新，無畫記，適合大一使用", authorName:"王小明", authorDept:"護理系" },
+  { image:"https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=600", title:"MAC 口紅套組", price:800, category:"彩妝", description:"全新未拆封，朋友送的用不到", authorName:"林小芳", authorDept:"護理系" },
+  { image:"https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600", title:"Uniqlo 白色襯衫", price:200, category:"衣服", description:"M號，實習用只穿過3次", authorName:"張大明", authorDept:"資訊管理系" },
+  { image:"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600", title:"宿舍小電扇", price:150, category:"生活用品", description:"功能正常，搬家出清", authorName:"陳小美", authorDept:"高齡健康照護系" },
+  { image:"https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=600", title:"解剖學講義", price:250, category:"書籍", description:"含筆記整理，八成新", authorName:"王小明", authorDept:"護理系" },
+  { image:"https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=600", title:"開架彩妝組", price:300, category:"彩妝", description:"眼影盤、腮紅，9成新", authorName:"李小華", authorDept:"護理系" },
+  { image:"https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=600", title:"實習白褲", price:180, category:"衣服", description:"L號，洗過兩次，幾乎全新", authorName:"陳小美", authorDept:"高齡健康照護系" },
+  { image:"https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600", title:"桌上型檯燈", price:200, category:"生活用品", description:"LED護眼檯燈，宿舍用", authorName:"張大明", authorDept:"資訊管理系" },
+];
+
+const SEED_JOBS = [
+  { title:"徵咖啡廳工讀生", category:"校內工讀", location:"學生餐廳旁", salary:"時薪 NT$ 190", hours:"彈性排班", description:"校內咖啡廳徵工讀生，工作內容包含飲料製作、收銀、環境整理。", contact:"Line: cafe123", authorName:"學生餐廳" },
+  { title:"圖書館助理", category:"校內工讀", location:"圖書館", salary:"時薪 NT$ 185", hours:"週一至週五 14:00-17:00", description:"協助圖書上架、整理、借還書作業。", contact:"Email: library@ntunhs.edu.tw", authorName:"圖書館" },
+  { title:"家教老師（數學、英文）", category:"校外兼職", location:"北投區", salary:"時薪 NT$ 500-800", hours:"週末或平日晚上", description:"徵國中數學、英文家教老師，需有耐心，可長期配合。", contact:"手機：0912-345-678", authorName:"家長" },
+  { title:"飲料店工讀生", category:"校外兼職", location:"石牌捷運站附近", salary:"時薪 NT$ 190", hours:"排班制，可配合課表", description:"手搖飲料店徵工讀生，需站立工作，會教學。", contact:"Line: drink2024", authorName:"飲料店" },
+  { title:"實驗室助理", category:"實習機會", location:"護理系實驗室", salary:"月薪 NT$ 8,000", hours:"每週 10 小時", description:"協助教授進行研究，整理實驗數據，適合對研究有興趣的學生。", contact:"Email: prof.wang@ntunhs.edu.tw", authorName:"王教授" },
+  { title:"便利商店大夜班", category:"校外兼職", location:"學校附近7-11", salary:"時薪 NT$ 220", hours:"23:00-07:00", description:"徵夜班工讀生，工作環境單純，適合夜貓子。", contact:"手機：0987-654-321", authorName:"便利商店" },
+];
+
+const SEED_COURSES = [
+  { title:"週三2-4換週五2-4", category:"必修課程", courseName:"解剖學", currentTime:"週三 13:10-15:00", desiredTime:"週五 13:10-15:00", reason:"週三有其他事情無法上課", contact:"Line: student123", authorName:"李小華", authorDept:"護理系" },
+  { title:"生理學換時段", category:"必修課程", courseName:"生理學", currentTime:"週一 10:10-12:00", desiredTime:"週二或週四同時段", reason:"想調整課表，配合打工時間", contact:"Email: student002@ntunhs.edu.tw", authorName:"張大明", authorDept:"護理系" },
+  { title:"週四選修課換週二", category:"選修課程", courseName:"健康促進", currentTime:"週四 15:10-17:00", desiredTime:"週二 15:10-17:00", reason:"週四需要實習，希望換到週二", contact:"手機：0912-345-678", authorName:"王小美", authorDept:"健康事業管理系" },
+  { title:"藥理學時段交換", category:"必修課程", courseName:"藥理學", currentTime:"週五 08:10-10:00", desiredTime:"週三 08:10-10:00", reason:"週五早上無法到校", contact:"Line: course2024", authorName:"陳小明", authorDept:"護理系" },
+  { title:"通識課程換時段", category:"選修課程", courseName:"音樂欣賞", currentTime:"週三 18:30-20:20", desiredTime:"週一或週二晚上", reason:"週三晚上有社團活動", contact:"Email: student005@ntunhs.edu.tw", authorName:"林小芳", authorDept:"高齡健康照護系" },
+];
+// ────────────────────────────────────────────────────────
 
 export default function AdminPage({ user }) {
   const [tab, setTab] = useState('products');
@@ -22,6 +51,8 @@ export default function AdminPage({ user }) {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [saved, setSaved] = useState(null);
   const [error, setError] = useState(null);
+  const [seedLoading, setSeedLoading] = useState(false);
+  const [seedDone, setSeedDone] = useState(false);
 
   useEffect(() => {
     if (!user || user.email !== ADMIN_EMAIL) return;
@@ -45,6 +76,43 @@ export default function AdminPage({ user }) {
     };
     loadAll();
   }, [user]);
+
+  const handleSeedData = async () => {
+    if (!window.confirm(`確定要匯入示範資料嗎？\n這會新增：\n• ${SEED_PRODUCTS.length} 筆商品\n• ${SEED_JOBS.length} 筆打工\n• ${SEED_COURSES.length} 筆換課\n（不會刪除現有資料）`)) return;
+    setSeedLoading(true);
+    try {
+      const now = serverTimestamp();
+      const prodDocs = await Promise.all(
+        SEED_PRODUCTS.map(p => addDoc(collection(db, 'products'), { ...p, createdAt: now }))
+      );
+      const jobDocs = await Promise.all(
+        SEED_JOBS.map(j => addDoc(collection(db, 'jobs'), { ...j, createdAt: now }))
+      );
+      const courseDocs = await Promise.all(
+        SEED_COURSES.map(c => addDoc(collection(db, 'courses'), { ...c, createdAt: now }))
+      );
+      // 更新本地狀態
+      setData(prev => ({
+        products: [
+          ...SEED_PRODUCTS.map((p, i) => ({ id: prodDocs[i].id, _col: 'products', ...p })),
+          ...prev.products,
+        ],
+        jobs: [
+          ...SEED_JOBS.map((j, i) => ({ id: jobDocs[i].id, _col: 'jobs', ...j })),
+          ...prev.jobs,
+        ],
+        courses: [
+          ...SEED_COURSES.map((c, i) => ({ id: courseDocs[i].id, _col: 'courses', ...c })),
+          ...prev.courses,
+        ],
+      }));
+      setSeedDone(true);
+      setTimeout(() => setSeedDone(false), 4000);
+    } catch (e) {
+      alert('匯入失敗：' + e.message);
+    }
+    setSeedLoading(false);
+  };
 
   const handleDelete = async (item) => {
     try {
@@ -133,15 +201,28 @@ export default function AdminPage({ user }) {
     <div style={{ maxWidth:960, margin:'0 auto', padding:'32px 20px' }}>
 
       {/* Header */}
-      <div style={{ background:'linear-gradient(135deg,#1e293b,#334155)', borderRadius:20, padding:'28px 32px', marginBottom:28, color:'#fff' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+      <div style={{ background:'linear-gradient(135deg,#1e293b,#334155)', borderRadius:20, padding:'28px 32px', marginBottom:20, color:'#fff' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:14, flexWrap:'wrap' }}>
           <div style={{ fontSize:36 }}>🛠️</div>
           <div>
             <h1 style={{ fontSize:22, fontWeight:800, marginBottom:4 }}>管理後台</h1>
             <p style={{ opacity:.7, fontSize:13 }}>登入身份：{user.email}</p>
           </div>
-          <div style={{ marginLeft:'auto', background:'rgba(255,255,255,.12)', borderRadius:10, padding:'8px 16px', fontSize:13, fontWeight:600 }}>
-            共 {total} 筆貼文
+          <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+            <div style={{ background:'rgba(255,255,255,.12)', borderRadius:10, padding:'8px 16px', fontSize:13, fontWeight:600 }}>
+              共 {total} 筆貼文
+            </div>
+            <button
+              onClick={handleSeedData}
+              disabled={seedLoading}
+              style={{
+                padding:'8px 16px', background: seedDone ? '#22c55e' : 'rgba(255,255,255,.18)',
+                border:'1.5px solid rgba(255,255,255,.35)', borderRadius:10, color:'#fff',
+                cursor:'pointer', fontWeight:700, fontSize:13, transition:'all .2s',
+              }}
+            >
+              {seedLoading ? '匯入中...' : seedDone ? '✓ 匯入完成！' : '📥 匯入示範資料'}
+            </button>
           </div>
         </div>
       </div>
@@ -181,7 +262,7 @@ export default function AdminPage({ user }) {
         <div style={{ textAlign:'center', padding:'60px', color:'#94a3b8', background:'#fff', borderRadius:16, boxShadow:'0 1px 8px rgba(0,0,0,.06)' }}>
           <div style={{ fontSize:40, marginBottom:12 }}>📭</div>
           <p style={{ fontWeight:600, color:'#1e293b', marginBottom:6 }}>此分類目前沒有貼文</p>
-          <p style={{ fontSize:13 }}>用戶透過「發布貼文」上傳後會出現在這裡</p>
+          <p style={{ fontSize:13 }}>點右上角「📥 匯入示範資料」或由用戶發布貼文</p>
         </div>
       ) : (
         <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
@@ -225,7 +306,8 @@ export default function AdminPage({ user }) {
                   </div>
                   <div style={{ fontSize:12, color:'#94a3b8', marginBottom:6 }}>
                     發布者：{item.authorName || item.poster || '—'}
-                    {fmtDate(item.createdAt || item.date) && <span>　{fmtDate(item.createdAt || item.date)}</span>}
+                    {item.authorDept && <span style={{ marginLeft:4 }}>· {item.authorDept}</span>}
+                    {fmtDate(item.createdAt || item.date) && <span style={{ marginLeft:4 }}>· {fmtDate(item.createdAt || item.date)}</span>}
                   </div>
                   {item.description && (
                     <p style={{ fontSize:13, color:'#64748b', marginBottom:8, lineHeight:1.5 }}>
