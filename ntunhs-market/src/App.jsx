@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
@@ -17,10 +17,36 @@ import { LoginPage, RegisterPage } from './pages/AuthPages';
 import ProfilePage from './pages/ProfilePage';
 import AdminPage from './pages/AdminPage';
 
+// ── 路由對照表 ──────────────────────────────────────────
+const PAGE_TO_PATH = {
+  'home':           '/',
+  'products':       '/products',
+  'product-detail': '/product',
+  'jobs':           '/jobs',
+  'courses':        '/courses',
+  'create':         '/create',
+  'chat':           '/chat',
+  'group-chat':     '/group-chat',
+  'visual-search':  '/visual-search',
+  'login':          '/login',
+  'register':       '/register',
+  'profile':        '/profile',
+  'admin':          '/admin',
+};
+
+const PATH_TO_PAGE = Object.fromEntries(
+  Object.entries(PAGE_TO_PATH).map(([p, u]) => [u, p])
+);
+
+// 讀取目前網址決定初始頁面
+function getInitialPage() {
+  const path = window.location.pathname;
+  return PATH_TO_PAGE[path] || 'home';
+}
+
+// ────────────────────────────────────────────────────────
 export default function App() {
-  const [page, setPage] = useState("home");
-  const [history, setHistory] = useState([]);
-  const [forwardHistory, setForwardHistory] = useState([]);
+  const [page, setPageState] = useState(getInitialPage);
   const [user, setUser] = useState(null);
   const [favorites, setFavorites] = useState(() => {
     try {
@@ -28,7 +54,13 @@ export default function App() {
       return saved ? new Set(JSON.parse(saved)) : new Set();
     } catch { return new Set(); }
   });
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(() => {
+    // 重新整理時從 sessionStorage 還原商品資訊
+    try {
+      const s = sessionStorage.getItem('ntunhs_selected_product');
+      return s ? JSON.parse(s) : null;
+    } catch { return null; }
+  });
 
   // 監聽 Firebase 登入狀態
   useEffect(() => {
@@ -51,29 +83,26 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  const navigate = (newPage) => {
-    setHistory(prev => [...prev, page]);
-    setForwardHistory([]);  // 新導航清空前進 history
-    setPage(newPage);
-  };
+  // 監聽瀏覽器的上一頁／下一頁按鈕（← →）
+  useEffect(() => {
+    const onPopState = (e) => {
+      const newPage = e.state?.page || PATH_TO_PAGE[window.location.pathname] || 'home';
+      setPageState(newPage);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
 
-  const goBack = () => {
-    if (history.length > 0) {
-      const prev = history[history.length - 1];
-      setForwardHistory(f => [page, ...f]);
-      setHistory(h => h.slice(0, -1));
-      setPage(prev);
-    }
-  };
+  // navigate：更新 page state 並同步網址列
+  const navigate = useCallback((newPage) => {
+    const path = PAGE_TO_PATH[newPage] || '/';
+    window.history.pushState({ page: newPage }, '', path);
+    setPageState(newPage);
+    window.scrollTo(0, 0);
+  }, []);
 
-  const goForward = () => {
-    if (forwardHistory.length > 0) {
-      const next = forwardHistory[0];
-      setHistory(h => [...h, page]);
-      setForwardHistory(f => f.slice(1));
-      setPage(next);
-    }
-  };
+  const goBack    = () => window.history.back();
+  const goForward = () => window.history.forward();
 
   const toggleFav = id => {
     setFavorites(prev => {
@@ -86,31 +115,29 @@ export default function App() {
 
   const onLogin = userData => {
     setUser(userData);
-    setHistory([]);
-    setForwardHistory([]);
-    setPage("home");
+    navigate('home');
   };
 
   const onLogout = async () => {
     await signOut(auth);
     setUser(null);
-    setHistory([]);
-    setForwardHistory([]);
-    setPage("home");
+    navigate('home');
   };
 
   const goToProduct = product => {
     setSelectedProduct(product);
-    navigate("product-detail");
+    // 儲存到 sessionStorage，重新整理時可還原
+    try { sessionStorage.setItem('ntunhs_selected_product', JSON.stringify(product)); } catch {}
+    navigate('product-detail');
   };
 
-  const goToChat = () => navigate("chat");
+  const goToChat = () => navigate('chat');
 
   const renderPage = () => {
     switch (page) {
-      case "home":
+      case 'home':
         return <HomePage setPage={navigate} onViewProduct={goToProduct} favorites={favorites} toggleFav={toggleFav} />;
-      case "products":
+      case 'products':
         return (
           <ProductListPage
             setPage={navigate}
@@ -119,38 +146,40 @@ export default function App() {
             onView={goToProduct}
           />
         );
-      case "product-detail":
-        return (
-          <ProductDetailPage
-            product={selectedProduct}
-            favorites={favorites}
-            toggleFav={toggleFav}
-            setPage={navigate}
-            onContact={goToChat}
-          />
-        );
-      case "jobs":
+      case 'product-detail':
+        return selectedProduct
+          ? (
+            <ProductDetailPage
+              product={selectedProduct}
+              favorites={favorites}
+              toggleFav={toggleFav}
+              setPage={navigate}
+              onContact={goToChat}
+            />
+          )
+          : <ProductListPage setPage={navigate} favorites={favorites} toggleFav={toggleFav} onView={goToProduct} />;
+      case 'jobs':
         return <JobListPage />;
-      case "courses":
+      case 'courses':
         return <CourseListPage />;
-      case "create":
+      case 'create':
         return <CreatePostPage setPage={navigate} isLoggedIn={!!user} user={user} />;
-      case "chat":
+      case 'chat':
         return <ChatPage />;
-      case "group-chat":
+      case 'group-chat':
         return <GroupChatPage user={user} />;
-      case "visual-search":
+      case 'visual-search':
         return (
           <VisualSearchPage
             setPage={navigate}
             setSelectedProduct={setSelectedProduct}
           />
         );
-      case "login":
+      case 'login':
         return <LoginPage setPage={navigate} onLogin={onLogin} />;
-      case "register":
+      case 'register':
         return <RegisterPage setPage={navigate} onLogin={onLogin} />;
-      case "profile":
+      case 'profile':
         return user
           ? (
             <ProfilePage
@@ -162,7 +191,7 @@ export default function App() {
             />
           )
           : <LoginPage setPage={navigate} onLogin={onLogin} />;
-      case "admin":
+      case 'admin':
         return user?.email === 'admin@ntunhs.edu.tw'
           ? <AdminPage user={user} />
           : <LoginPage setPage={navigate} onLogin={onLogin} />;
@@ -176,9 +205,9 @@ export default function App() {
       <Navbar
         page={page}
         setPage={navigate}
-        goBack={history.length > 0 ? goBack : null}
+        goBack={goBack}
         goForward={goForward}
-        canGoForward={forwardHistory.length > 0}
+        canGoForward={false}
         user={user}
         isLoggedIn={!!user}
         favoriteCount={favorites.size}
