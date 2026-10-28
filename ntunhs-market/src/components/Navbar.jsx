@@ -23,7 +23,9 @@ function NavArrowBtn({ onClick, disabled, children }) {
   );
 }
 
-export default function Navbar({ page, setPage, goBack, goForward, canGoForward, isLoggedIn }) {
+const ADMIN_EMAIL = 'admin@ntunhs.edu.tw';
+
+export default function Navbar({ page, setPage, goBack, goForward, canGoForward, isLoggedIn, user }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const links = [
@@ -66,6 +68,11 @@ export default function Navbar({ page, setPage, goBack, goForward, canGoForward,
               {l.label}
             </button>
           ))}
+          {user?.email === ADMIN_EMAIL && (
+            <button onClick={()=>setPage("admin")} style={{display:"flex", alignItems:"center", gap:5, border:"none", background:page==="admin"?"#fef3c7":"none", color:"#d97706", cursor:"pointer", padding:"6px 12px", borderRadius:8, fontWeight:600, fontSize:14}}>
+              🛠️ 管理後台
+            </button>
+          )}
           {isLoggedIn
             ? <button onClick={()=>setPage("profile")} style={{display:"flex", alignItems:"center", gap:5, border:"none", background:page==="profile"?"#e0f2fe":"none", color:"#0ea5e9", cursor:"pointer", padding:"6px 12px", borderRadius:8, fontWeight:600, fontSize:14}}>
                 <UserIcon/>會員中心
@@ -94,6 +101,9 @@ export default function Navbar({ page, setPage, goBack, goForward, canGoForward,
               {l.label}
             </button>
           ))}
+          {user?.email === ADMIN_EMAIL && (
+            <button onClick={()=>{setPage("admin");setMobileOpen(false)}} style={{display:"block", width:"100%", textAlign:"left", border:"none", background:"none", cursor:"pointer", padding:"10px 0", color:"#d97706", fontWeight:600}}>🛠️ 管理後台</button>
+          )}
           {isLoggedIn
             ? <button onClick={()=>{setPage("profile");setMobileOpen(false)}} style={{display:"block", width:"100%", textAlign:"left", border:"none", background:"none", cursor:"pointer", padding:"10px 0", color:"#0ea5e9", fontWeight:600}}>會員中心</button>
             : <button onClick={()=>{setPage("login");setMobileOpen(false)}} style={{display:"block", width:"100%", textAlign:"left", border:"none", background:"linear-gradient(135deg,#0ea5e9,#0284c7)", color:"#fff", cursor:"pointer", padding:"10px 16px", borderRadius:8, fontWeight:600, marginTop:8}}>登入</button>
