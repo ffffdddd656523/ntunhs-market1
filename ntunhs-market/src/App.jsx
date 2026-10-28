@@ -18,6 +18,7 @@ import ProfilePage from './pages/ProfilePage';
 
 export default function App() {
   const [page, setPage] = useState("home");
+  const [history, setHistory] = useState([]);
   const [user, setUser] = useState(null);
   const [favorites, setFavorites] = useState(new Set());
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -26,7 +27,6 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // 從 Firestore 取得完整用戶資料
         try {
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
           if (userDoc.exists()) {
@@ -44,6 +44,19 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  const navigate = (newPage) => {
+    setHistory(prev => [...prev, page]);
+    setPage(newPage);
+  };
+
+  const goBack = () => {
+    if (history.length > 0) {
+      const prev = history[history.length - 1];
+      setHistory(h => h.slice(0, -1));
+      setPage(prev);
+    }
+  };
+
   const toggleFav = id => {
     setFavorites(prev => {
       const next = new Set(prev);
@@ -54,30 +67,32 @@ export default function App() {
 
   const onLogin = userData => {
     setUser(userData);
+    setHistory([]);
     setPage("home");
   };
 
   const onLogout = async () => {
     await signOut(auth);
     setUser(null);
+    setHistory([]);
     setPage("home");
   };
 
   const goToProduct = product => {
     setSelectedProduct(product);
-    setPage("product-detail");
+    navigate("product-detail");
   };
 
-  const goToChat = () => setPage("chat");
+  const goToChat = () => navigate("chat");
 
   const renderPage = () => {
     switch (page) {
       case "home":
-        return <HomePage setPage={setPage} onViewProduct={goToProduct} favorites={favorites} toggleFav={toggleFav} />;
+        return <HomePage setPage={navigate} onViewProduct={goToProduct} favorites={favorites} toggleFav={toggleFav} />;
       case "products":
         return (
           <ProductListPage
-            setPage={setPage}
+            setPage={navigate}
             favorites={favorites}
             toggleFav={toggleFav}
             onView={goToProduct}
@@ -89,7 +104,7 @@ export default function App() {
             product={selectedProduct}
             favorites={favorites}
             toggleFav={toggleFav}
-            setPage={setPage}
+            setPage={navigate}
             onContact={goToChat}
           />
         );
@@ -98,7 +113,7 @@ export default function App() {
       case "courses":
         return <CourseListPage />;
       case "create":
-        return <CreatePostPage setPage={setPage} isLoggedIn={!!user} user={user} />;
+        return <CreatePostPage setPage={navigate} isLoggedIn={!!user} user={user} />;
       case "chat":
         return <ChatPage />;
       case "group-chat":
@@ -106,14 +121,14 @@ export default function App() {
       case "visual-search":
         return (
           <VisualSearchPage
-            setPage={setPage}
+            setPage={navigate}
             setSelectedProduct={setSelectedProduct}
           />
         );
       case "login":
-        return <LoginPage setPage={setPage} onLogin={onLogin} />;
+        return <LoginPage setPage={navigate} onLogin={onLogin} />;
       case "register":
-        return <RegisterPage setPage={setPage} onLogin={onLogin} />;
+        return <RegisterPage setPage={navigate} onLogin={onLogin} />;
       case "profile":
         return user
           ? (
@@ -121,13 +136,13 @@ export default function App() {
               user={user}
               onLogout={onLogout}
               favorites={favorites}
-              setPage={setPage}
+              setPage={navigate}
               setSelectedProduct={setSelectedProduct}
             />
           )
-          : <LoginPage setPage={setPage} onLogin={onLogin} />;
+          : <LoginPage setPage={navigate} onLogin={onLogin} />;
       default:
-        return <HomePage setPage={setPage} onViewProduct={goToProduct} favorites={favorites} toggleFav={toggleFav} />;
+        return <HomePage setPage={navigate} onViewProduct={goToProduct} favorites={favorites} toggleFav={toggleFav} />;
     }
   };
 
@@ -135,7 +150,8 @@ export default function App() {
     <div style={{minHeight:"100vh", display:"flex", flexDirection:"column", fontFamily:"'Noto Sans TC', sans-serif", background:"#f8fafc"}}>
       <Navbar
         page={page}
-        setPage={setPage}
+        setPage={navigate}
+        goBack={history.length > 0 ? goBack : null}
         user={user}
         isLoggedIn={!!user}
         favoriteCount={favorites.size}
@@ -143,7 +159,7 @@ export default function App() {
       <main style={{flex:1, paddingTop:72}}>
         {renderPage()}
       </main>
-      <Footer setPage={setPage} />
+      <Footer setPage={navigate} />
     </div>
   );
 }
