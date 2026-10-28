@@ -15,6 +15,7 @@ import GroupChatPage from './pages/GroupChatPage';
 import VisualSearchPage from './pages/VisualSearchPage';
 import { LoginPage, RegisterPage } from './pages/AuthPages';
 import ProfilePage from './pages/ProfilePage';
+import AdminPage from './pages/AdminPage';
 
 export default function App() {
   const [page, setPage] = useState("home");
@@ -154,6 +155,10 @@ export default function App() {
               setSelectedProduct={setSelectedProduct}
             />
           )
+          : <LoginPage setPage={navigate} onLogin={onLogin} />;
+      case "admin":
+        return user?.email === 'admin@ntunhs.edu.tw'
+          ? <AdminPage user={user} />
           : <LoginPage setPage={navigate} onLogin={onLogin} />;
       default:
         return <HomePage setPage={navigate} onViewProduct={goToProduct} favorites={favorites} toggleFav={toggleFav} />;
