@@ -19,6 +19,7 @@ import ProfilePage from './pages/ProfilePage';
 export default function App() {
   const [page, setPage] = useState("home");
   const [history, setHistory] = useState([]);
+  const [forwardHistory, setForwardHistory] = useState([]);
   const [user, setUser] = useState(null);
   const [favorites, setFavorites] = useState(new Set());
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -46,14 +47,25 @@ export default function App() {
 
   const navigate = (newPage) => {
     setHistory(prev => [...prev, page]);
+    setForwardHistory([]);  // 新導航清空前進 history
     setPage(newPage);
   };
 
   const goBack = () => {
     if (history.length > 0) {
       const prev = history[history.length - 1];
+      setForwardHistory(f => [page, ...f]);
       setHistory(h => h.slice(0, -1));
       setPage(prev);
+    }
+  };
+
+  const goForward = () => {
+    if (forwardHistory.length > 0) {
+      const next = forwardHistory[0];
+      setHistory(h => [...h, page]);
+      setForwardHistory(f => f.slice(1));
+      setPage(next);
     }
   };
 
@@ -68,6 +80,7 @@ export default function App() {
   const onLogin = userData => {
     setUser(userData);
     setHistory([]);
+    setForwardHistory([]);
     setPage("home");
   };
 
@@ -75,6 +88,7 @@ export default function App() {
     await signOut(auth);
     setUser(null);
     setHistory([]);
+    setForwardHistory([]);
     setPage("home");
   };
 
@@ -117,7 +131,7 @@ export default function App() {
       case "chat":
         return <ChatPage />;
       case "group-chat":
-        return <GroupChatPage />;
+        return <GroupChatPage user={user} />;
       case "visual-search":
         return (
           <VisualSearchPage
@@ -152,6 +166,8 @@ export default function App() {
         page={page}
         setPage={navigate}
         goBack={history.length > 0 ? goBack : null}
+        goForward={goForward}
+        canGoForward={forwardHistory.length > 0}
         user={user}
         isLoggedIn={!!user}
         favoriteCount={favorites.size}
