@@ -3,7 +3,7 @@
 // ============================================================
 
 export const PRODUCTS = [
-  { id:"1", image:"https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=600", title:"護理學原理 第八版", price:350, category:"書籍", description:"九成新，無畫記，適合大一使用", date:"2天前", seller:"王小明", dept:"護理系" },
+  { id:"1", image:"https://images.unsplash.com/photo-1544717305-2782549b5136?w=600", title:"護理學原理 第八版", price:350, category:"書籍", description:"九成新，無畫記，適合大一使用", date:"2天前", seller:"王小明", dept:"護理系" },
   { id:"2", image:"https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=600", title:"MAC 口紅套組", price:800, category:"彩妝", description:"全新未拆封，朋友送的用不到", date:"3天前", seller:"林小芳", dept:"護理系" },
   { id:"3", image:"https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600", title:"Uniqlo 白色襯衫", price:200, category:"衣服", description:"M號，實習用只穿過3次", date:"1週前", seller:"張大明", dept:"資訊管理系" },
   { id:"4", image:"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600", title:"宿舍小電扇", price:150, category:"生活用品", description:"功能正常，搬家出清", date:"5天前", seller:"陳小美", dept:"高齡健康照護系" },
