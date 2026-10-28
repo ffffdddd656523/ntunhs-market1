@@ -2,35 +2,50 @@ import { useState } from 'react';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  updateProfile
 } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
-const DEPTS = ["護理學系","物理治療學系","職業治療學系","語言治療與聽力學系","醫學影像暨放射科學系","口腔衛生學系","健康照護管理學系","嬰幼兒保育系","文化事業發展學系","資訊管理系"];
+const DEPTS = [
+  "護理學系","物理治療學系","職業治療學系","語言治療與聽力學系",
+  "醫學影像暨放射科學系","口腔衛生學系","健康照護管理學系",
+  "嬰幼兒保育系","文化事業發展學系","資訊管理系"
+];
 
+// 學號 → Firebase 用的虛擬 email
+const toEmail = (studentId) => `${studentId}@ntunhs.edu.tw`;
+
+// ── 登入頁 ───────────────────────────────────────────────
 export function LoginPage({ setPage, onLogin }) {
-  const [form, setForm] = useState({email:"", password:""});
+  const [form, setForm] = useState({ studentId: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async e => {
     e.preventDefault();
-    if (!form.email.endsWith("@ntunhs.edu.tw")) {
-      setError("請使用北護學校信箱（@ntunhs.edu.tw）登入");
+    setError("");
+    const sid = form.studentId.trim();
+    if (!/^\d{9}$/.test(sid)) {
+      setError("學號格式不正確（請輸入 9 位數字）");
+      return;
+    }
+    if (form.password.length < 6) {
+      setError("密碼至少需要 6 個字元");
       return;
     }
     setLoading(true);
-    setError("");
     try {
-      const result = await signInWithEmailAndPassword(auth, form.email, form.password);
-      const u = result.user;
-      onLogin({ uid: u.uid, email: u.email, name: u.displayName || u.email.split("@")[0] });
+      const cred = await signInWithEmailAndPassword(auth, toEmail(sid), form.password);
+      const userDoc = await getDoc(doc(db, "users", cred.user.uid));
+      const userData = userDoc.exists() ? userDoc.data() : { name: sid };
+      onLogin({ uid: cred.user.uid, email: cred.user.email, studentId: sid, ...userData });
     } catch (err) {
-      if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
-        setError("信箱或密碼錯誤，請重新輸入");
-      } else if (err.code === "auth/too-many-requests") {
-        setError("登入失敗次數過多，請稍後再試");
+      if (
+        err.code === 'auth/invalid-credential' ||
+        err.code === 'auth/user-not-found' ||
+        err.code === 'auth/wrong-password'
+      ) {
+        setError("學號或密碼錯誤");
       } else {
         setError("登入失敗：" + err.message);
       }
@@ -41,7 +56,6 @@ export function LoginPage({ setPage, onLogin }) {
   return (
     <div style={{minHeight:"70vh", display:"flex", alignItems:"center", justifyContent:"center", padding:"40px 20px"}}>
       <div style={{width:"100%", maxWidth:440, background:"#fff", borderRadius:20, padding:"40px 36px", boxShadow:"0 4px 24px rgba(0,0,0,.09)"}}>
-        {/* Logo */}
         <div style={{textAlign:"center", marginBottom:28}}>
           <div style={{width:56, height:56, borderRadius:14, background:"linear-gradient(135deg,#0ea5e9,#0284c7)", display:"inline-flex", alignItems:"center", justifyContent:"center", color:"#fff", fontWeight:900, fontSize:22, marginBottom:12}}>市</div>
           <h2 style={{fontSize:22, fontWeight:800, color:"#1e293b"}}>歡迎回來</h2>
@@ -56,14 +70,16 @@ export function LoginPage({ setPage, onLogin }) {
 
         <form onSubmit={handleSubmit}>
           <div style={{marginBottom:16}}>
-            <label style={{fontSize:14, fontWeight:600, color:"#374151", display:"block", marginBottom:6}}>學校信箱</label>
+            <label style={{fontSize:14, fontWeight:600, color:"#374151", display:"block", marginBottom:6}}>學號</label>
             <input
-              type="email"
+              type="text"
+              inputMode="numeric"
               required
-              value={form.email}
-              onChange={e=>setForm({...form,email:e.target.value})}
-              placeholder="s123456789@ntunhs.edu.tw"
-              style={{width:"100%", padding:"11px 14px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", boxSizing:"border-box"}}
+              maxLength={9}
+              value={form.studentId}
+              onChange={e => setForm({...form, studentId: e.target.value})}
+              placeholder="例：122214102"
+              style={{width:"100%", padding:"11px 14px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", boxSizing:"border-box", letterSpacing:2}}
               onFocus={e=>e.target.style.borderColor="#0ea5e9"}
               onBlur={e=>e.target.style.borderColor="#e2e8f0"}
             />
@@ -75,7 +91,7 @@ export function LoginPage({ setPage, onLogin }) {
               type="password"
               required
               value={form.password}
-              onChange={e=>setForm({...form,password:e.target.value})}
+              onChange={e => setForm({...form, password: e.target.value})}
               placeholder="請輸入密碼"
               style={{width:"100%", padding:"11px 14px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", boxSizing:"border-box"}}
               onFocus={e=>e.target.style.borderColor="#0ea5e9"}
@@ -88,38 +104,37 @@ export function LoginPage({ setPage, onLogin }) {
             disabled={loading}
             style={{width:"100%", padding:"13px 0", background:"linear-gradient(135deg,#0ea5e9,#0284c7)", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:16, cursor:loading?"not-allowed":"pointer", opacity:loading?0.7:1}}
           >
-            {loading ? "登入中..." : "登入"}
+            {loading ? "登入中…" : "登入"}
           </button>
         </form>
 
         <div style={{textAlign:"center", marginTop:20, color:"#64748b", fontSize:13}}>
           還沒有帳號？{" "}
-          <button
-            onClick={() => setPage("register")}
-            style={{border:"none", background:"none", color:"#0284c7", fontWeight:600, cursor:"pointer", fontSize:13}}
-          >
+          <button onClick={() => setPage("register")} style={{border:"none", background:"none", color:"#0284c7", fontWeight:600, cursor:"pointer", fontSize:13}}>
             立即註冊
           </button>
         </div>
 
         <div style={{marginTop:20, background:"#f0f9ff", borderRadius:10, padding:"12px 14px", fontSize:12, color:"#0284c7"}}>
-          💡 僅限北護大學在學學生使用，請使用學校電子信箱（@ntunhs.edu.tw）註冊。
+          💡 僅限北護大學在學學生使用，請以學號（9 位數字）登入。
         </div>
       </div>
     </div>
   );
 }
 
+// ── 註冊頁 ───────────────────────────────────────────────
 export function RegisterPage({ setPage, onLogin }) {
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState({name:"", email:"", dept:"", year:"", password:"", confirm:""});
+  const [form, setForm] = useState({ name: "", studentId: "", dept: "", year: "", password: "", confirm: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleStep1 = e => {
     e.preventDefault();
-    if (!form.email.endsWith("@ntunhs.edu.tw")) {
-      setError("請使用北護學校信箱（@ntunhs.edu.tw）");
+    const sid = form.studentId.trim();
+    if (!/^\d{9}$/.test(sid)) {
+      setError("學號格式不正確（請輸入 9 位數字）");
       return;
     }
     if (!form.name.trim()) {
@@ -141,26 +156,22 @@ export function RegisterPage({ setPage, onLogin }) {
       return;
     }
     setLoading(true);
-    setError("");
     try {
-      const result = await createUserWithEmailAndPassword(auth, form.email, form.password);
-      const u = result.user;
-      // 設定顯示名稱
-      await updateProfile(u, { displayName: form.name });
-      // 儲存用戶資料到 Firestore
-      await setDoc(doc(db, "users", u.uid), {
-        name: form.name,
-        email: form.email,
+      const sid = form.studentId.trim();
+      const cred = await createUserWithEmailAndPassword(auth, toEmail(sid), form.password);
+      const userData = {
+        name: form.name.trim(),
+        studentId: sid,
         dept: form.dept,
         year: form.year,
-        createdAt: new Date().toISOString()
-      });
-      onLogin({ uid: u.uid, email: u.email, name: form.name, dept: form.dept, year: form.year });
+        email: toEmail(sid),
+        createdAt: serverTimestamp(),
+      };
+      await setDoc(doc(db, "users", cred.user.uid), userData);
+      onLogin({ uid: cred.user.uid, ...userData });
     } catch (err) {
-      if (err.code === "auth/email-already-in-use") {
-        setError("此信箱已被註冊，請直接登入");
-      } else if (err.code === "auth/weak-password") {
-        setError("密碼強度不足，請使用至少 6 個字元");
+      if (err.code === 'auth/email-already-in-use') {
+        setError("此學號已被註冊，請直接登入");
       } else {
         setError("註冊失敗：" + err.message);
       }
@@ -171,7 +182,6 @@ export function RegisterPage({ setPage, onLogin }) {
   return (
     <div style={{minHeight:"70vh", display:"flex", alignItems:"center", justifyContent:"center", padding:"40px 20px"}}>
       <div style={{width:"100%", maxWidth:460, background:"#fff", borderRadius:20, padding:"40px 36px", boxShadow:"0 4px 24px rgba(0,0,0,.09)"}}>
-        {/* Logo */}
         <div style={{textAlign:"center", marginBottom:6}}>
           <div style={{width:50, height:50, borderRadius:12, background:"linear-gradient(135deg,#0ea5e9,#0284c7)", display:"inline-flex", alignItems:"center", justifyContent:"center", color:"#fff", fontWeight:900, fontSize:20, marginBottom:10}}>市</div>
           <h2 style={{fontSize:22, fontWeight:800, color:"#1e293b"}}>加入北護 Market</h2>
@@ -203,8 +213,17 @@ export function RegisterPage({ setPage, onLogin }) {
               <input required value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="請輸入真實姓名" style={{width:"100%", padding:"11px 14px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", boxSizing:"border-box"}}/>
             </div>
             <div style={{marginBottom:14}}>
-              <label style={{fontSize:14, fontWeight:600, color:"#374151", display:"block", marginBottom:6}}>學校信箱 *</label>
-              <input required type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} placeholder="s123456789@ntunhs.edu.tw" style={{width:"100%", padding:"11px 14px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", boxSizing:"border-box"}}/>
+              <label style={{fontSize:14, fontWeight:600, color:"#374151", display:"block", marginBottom:6}}>學號 *</label>
+              <input
+                required
+                type="text"
+                inputMode="numeric"
+                maxLength={9}
+                value={form.studentId}
+                onChange={e=>setForm({...form,studentId:e.target.value})}
+                placeholder="9 位數字，例：122214102"
+                style={{width:"100%", padding:"11px 14px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", boxSizing:"border-box", letterSpacing:2}}
+              />
             </div>
             <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:20}}>
               <div>
@@ -244,7 +263,7 @@ export function RegisterPage({ setPage, onLogin }) {
                 上一步
               </button>
               <button type="submit" disabled={loading} style={{flex:2, padding:"13px 0", background:"linear-gradient(135deg,#0ea5e9,#0284c7)", color:"#fff", border:"none", borderRadius:12, fontWeight:700, fontSize:15, cursor:loading?"not-allowed":"pointer", opacity:loading?0.7:1}}>
-                {loading ? "註冊中..." : "完成註冊"}
+                {loading ? "註冊中…" : "完成註冊"}
               </button>
             </div>
           </form>
