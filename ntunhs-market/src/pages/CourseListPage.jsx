@@ -1,15 +1,108 @@
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
-import { SearchIcon, ClockIcon, UserIcon } from '../components/Icons';
+import { SearchIcon, ClockIcon, UserIcon, XIcon } from '../components/Icons';
 import { Badge } from '../components/Common';
 import { COURSES } from '../data';
+
+function CourseModal({ course, onClose }) {
+  if (!course) return null;
+  const courseType = course.category || course.type || "必修課程";
+  const [tc, bc] = courseType === "必修課程"
+    ? ["#1d4ed8","#dbeafe"]
+    : ["#7c3aed","#ede9fe"];
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard?.writeText(course.contact || "").then(() => {
+      setCopied(true); setTimeout(() => setCopied(false), 2000);
+    });
+  };
+  return (
+    <div
+      onClick={onClose}
+      style={{position:"fixed",inset:0,background:"rgba(15,23,42,.45)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}
+    >
+      <div
+        onClick={e=>e.stopPropagation()}
+        style={{background:"#fff",borderRadius:20,padding:"32px 28px",maxWidth:540,width:"100%",boxShadow:"0 20px 60px rgba(0,0,0,.18)",position:"relative",maxHeight:"85vh",overflowY:"auto"}}
+      >
+        {/* Close */}
+        <button onClick={onClose} style={{position:"absolute",top:16,right:16,width:32,height:32,borderRadius:"50%",border:"none",background:"#f1f5f9",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#64748b"}}>
+          <XIcon/>
+        </button>
+
+        {/* Header badges */}
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14,alignItems:"center"}}>
+          <Badge color={tc} bg={bc}>{courseType}</Badge>
+          {course.courseName && <Badge color="#15803d" bg="#dcfce7">{course.courseName}</Badge>}
+          <span style={{marginLeft:"auto",fontSize:12,color:"#94a3b8",display:"flex",gap:3,alignItems:"center"}}>
+            <ClockIcon/>{course.date || (course.createdAt||"").slice(0,10)}
+          </span>
+        </div>
+        <h2 style={{fontSize:22,fontWeight:800,color:"#1e293b",marginBottom:20,lineHeight:1.3}}>{course.title}</h2>
+
+        {/* Time swap grid */}
+        {(course.currentTime || course.desiredTime) && (
+          <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:10,alignItems:"center",background:"#f8fafc",borderRadius:14,padding:"18px",marginBottom:20}}>
+            <div style={{textAlign:"center"}}>
+              <div style={{fontSize:11,color:"#94a3b8",marginBottom:6}}>現在時段</div>
+              <div style={{fontSize:15,fontWeight:700,color:"#1e293b"}}>{course.currentTime || "—"}</div>
+            </div>
+            <div style={{fontSize:22,color:"#94a3b8",fontWeight:300}}>→</div>
+            <div style={{textAlign:"center"}}>
+              <div style={{fontSize:11,color:"#94a3b8",marginBottom:6}}>希望換到</div>
+              <div style={{fontSize:15,fontWeight:700,color:"#0284c7"}}>{course.desiredTime || "—"}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Description */}
+        {course.description && (
+          <div style={{marginBottom:16}}>
+            <div style={{fontSize:13,fontWeight:600,color:"#374151",marginBottom:8}}>詳細說明</div>
+            <p style={{fontSize:14,color:"#475569",lineHeight:1.8,background:"#f8fafc",borderRadius:10,padding:"14px 16px"}}>{course.description}</p>
+          </div>
+        )}
+
+        {/* Reason */}
+        {course.reason && (
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:13,fontWeight:600,color:"#374151",marginBottom:8}}>換課原因</div>
+            <p style={{fontSize:14,color:"#475569",lineHeight:1.7,background:"#fffbeb",borderRadius:10,padding:"12px 16px",borderLeft:"3px solid #fbbf24"}}>{course.reason}</p>
+          </div>
+        )}
+
+        {/* Poster */}
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20,background:"#f8fafc",borderRadius:10,padding:"12px 14px"}}>
+          <UserIcon/>
+          <div>
+            <div style={{fontSize:12,color:"#94a3b8"}}>發布者</div>
+            <div style={{fontSize:14,fontWeight:600,color:"#1e293b"}}>{course.authorName || course.poster}{course.department ? `（${course.department}）` : ""}</div>
+          </div>
+        </div>
+
+        {/* Contact */}
+        <div style={{background:"#f0fdf4",borderRadius:14,padding:"16px 18px"}}>
+          <div style={{fontSize:12,color:"#16a34a",fontWeight:600,marginBottom:6}}>聯絡方式</div>
+          <div style={{fontSize:15,fontWeight:700,color:"#1e293b",marginBottom:12}}>{course.contact}</div>
+          <button
+            onClick={copy}
+            style={{width:"100%",padding:"11px 0",borderRadius:10,border:"none",background:copied?"#22c55e":"linear-gradient(135deg,#22c55e,#16a34a)",color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",transition:"background .2s"}}
+          >
+            {copied ? "✓ 已複製！" : "複製聯絡方式"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function CourseListPage() {
   const [search, setSearch] = useState("");
   const [type, setType] = useState("all");
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(null);
 
   useEffect(() => {
     const q = query(collection(db, "courses"), orderBy("createdAt", "desc"));
@@ -59,7 +152,13 @@ export default function CourseListPage() {
           {filtered.map(c => {
             const courseType = c.category || c.type || "必修課程";
             return (
-              <div key={c.id} style={{background:"#fff", borderRadius:16, padding:"22px 24px", boxShadow:"0 2px 10px rgba(0,0,0,.06)"}}>
+              <div
+                key={c.id}
+                onClick={() => setSelected(c)}
+                style={{background:"#fff", borderRadius:16, padding:"22px 24px", boxShadow:"0 2px 10px rgba(0,0,0,.06)", cursor:"pointer", transition:"box-shadow .15s, transform .15s"}}
+                onMouseEnter={e=>{e.currentTarget.style.boxShadow="0 6px 24px rgba(0,0,0,.11)"; e.currentTarget.style.transform="translateY(-1px)";}}
+                onMouseLeave={e=>{e.currentTarget.style.boxShadow="0 2px 10px rgba(0,0,0,.06)"; e.currentTarget.style.transform="none";}}
+              >
                 <div style={{display:"flex", alignItems:"center", gap:10, marginBottom:10}}>
                   <Badge color={courseType==="必修課程"?"#1d4ed8":"#7c3aed"} bg={courseType==="必修課程"?"#dbeafe":"#ede9fe"}>{courseType}</Badge>
                   {c.courseName && <Badge color="#15803d" bg="#dcfce7">{c.courseName}</Badge>}
@@ -80,19 +179,20 @@ export default function CourseListPage() {
                     </div>}
                   </div>
                 )}
-                {c.description && <p style={{fontSize:13, color:"#64748b", marginBottom:12}}>{c.description}</p>}
-                {c.reason && <p style={{fontSize:13, color:"#64748b", marginBottom:12}}>原因：{c.reason}</p>}
+                {c.description && <p style={{fontSize:13, color:"#64748b", marginBottom:12, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden"}}>{c.description}</p>}
                 <div style={{display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:8, fontSize:13}}>
                   <span style={{display:"flex", gap:6, alignItems:"center", color:"#475569"}}>
                     <UserIcon/>{c.authorName || c.poster}{c.department ? `（${c.department}）` : ""}
                   </span>
-                  <span style={{color:"#0284c7", fontWeight:600}}>聯絡：{c.contact}</span>
+                  <span style={{color:"#22c55e", fontWeight:600, fontSize:12}}>點擊查看詳情 →</span>
                 </div>
               </div>
             );
           })}
         </div>
       )}
+
+      <CourseModal course={selected} onClose={() => setSelected(null)} />
     </div>
   );
 }
