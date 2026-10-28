@@ -22,7 +22,12 @@ export default function App() {
   const [history, setHistory] = useState([]);
   const [forwardHistory, setForwardHistory] = useState([]);
   const [user, setUser] = useState(null);
-  const [favorites, setFavorites] = useState(new Set());
+  const [favorites, setFavorites] = useState(() => {
+    try {
+      const saved = localStorage.getItem('ntunhs_favorites');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
   const [selectedProduct, setSelectedProduct] = useState(null);
 
   // 監聽 Firebase 登入狀態
@@ -74,6 +79,7 @@ export default function App() {
     setFavorites(prev => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
+      try { localStorage.setItem('ntunhs_favorites', JSON.stringify([...next])); } catch {}
       return next;
     });
   };
