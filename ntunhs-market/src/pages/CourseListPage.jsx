@@ -3,7 +3,14 @@ import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import { SearchIcon, ClockIcon, UserIcon, XIcon } from '../components/Icons';
 import { Badge } from '../components/Common';
-import { COURSES } from '../data';
+
+// Firestore Timestamp 或字串都能正確顯示
+function fmtDate(ts) {
+  if (!ts) return '';
+  if (typeof ts === 'string') return ts.slice(0, 10);
+  if (ts.toDate) return ts.toDate().toLocaleDateString('zh-TW');
+  return '';
+}
 
 function CourseModal({ course, onClose }) {
   const [copied, setCopied] = useState(false);
@@ -36,7 +43,7 @@ function CourseModal({ course, onClose }) {
           <Badge color={tc} bg={bc}>{courseType}</Badge>
           {course.courseName && <Badge color="#15803d" bg="#dcfce7">{course.courseName}</Badge>}
           <span style={{marginLeft:"auto",fontSize:12,color:"#94a3b8",display:"flex",gap:3,alignItems:"center"}}>
-            <ClockIcon/>{course.date || (course.createdAt||"").slice(0,10)}
+            <ClockIcon/>{course.date || fmtDate(course.createdAt)}
           </span>
         </div>
         <h2 style={{fontSize:22,fontWeight:800,color:"#1e293b",marginBottom:20,lineHeight:1.3}}>{course.title}</h2>
@@ -107,8 +114,8 @@ export default function CourseListPage() {
   useEffect(() => {
     const q = query(collection(db, "courses"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(q,
-      snap => { setCourses([...snap.docs.map(d => ({ id: d.id, ...d.data() })), ...COURSES]); setLoading(false); },
-      () => { setCourses(COURSES); setLoading(false); }
+      snap => { setCourses(snap.docs.map(d => ({ id: d.id, ...d.data() }))); setLoading(false); },
+      () => { setCourses([]); setLoading(false); }
     );
     return () => unsub();
   }, []);
@@ -163,7 +170,7 @@ export default function CourseListPage() {
                   <Badge color={courseType==="必修課程"?"#1d4ed8":"#7c3aed"} bg={courseType==="必修課程"?"#dbeafe":"#ede9fe"}>{courseType}</Badge>
                   {c.courseName && <Badge color="#15803d" bg="#dcfce7">{c.courseName}</Badge>}
                   <span style={{marginLeft:"auto", fontSize:12, color:"#94a3b8", display:"flex", gap:3, alignItems:"center"}}>
-                    <ClockIcon/>{c.date || (c.createdAt || "").slice(0,10)}
+                    <ClockIcon/>{c.date || fmtDate(c.createdAt)}
                   </span>
                 </div>
                 <h3 style={{fontSize:17, fontWeight:700, color:"#1e293b", marginBottom:12}}>{c.title}</h3>

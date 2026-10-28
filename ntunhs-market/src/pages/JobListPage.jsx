@@ -3,13 +3,20 @@ import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import { SearchIcon, ClockIcon, MapPinIcon, DollarIcon, XIcon } from '../components/Icons';
 import { Badge } from '../components/Common';
-import { JOBS } from '../data';
 
 const TYPE_COLOR = {
   "校內工讀": ["#1d4ed8","#dbeafe"],
   "校外兼職": ["#c2410c","#ffedd5"],
   "實習機會": ["#15803d","#dcfce7"]
 };
+
+// Firestore Timestamp 或字串都能正確顯示
+function fmtDate(ts) {
+  if (!ts) return '';
+  if (typeof ts === 'string') return ts.slice(0, 10);
+  if (ts.toDate) return ts.toDate().toLocaleDateString('zh-TW');
+  return '';
+}
 
 function JobModal({ job, onClose }) {
   const [copied, setCopied] = useState(false);
@@ -39,7 +46,7 @@ function JobModal({ job, onClose }) {
         <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
           <Badge color={tc} bg={bc}>{jobType}</Badge>
           <span style={{fontSize:12,color:"#94a3b8",display:"flex",alignItems:"center",gap:3}}>
-            <ClockIcon/>{job.date || (job.createdAt||"").slice(0,10)}
+            <ClockIcon/>{job.date || fmtDate(job.createdAt)}
           </span>
         </div>
         <h2 style={{fontSize:22,fontWeight:800,color:"#1e293b",marginBottom:20,lineHeight:1.3}}>{job.title}</h2>
@@ -106,8 +113,8 @@ export default function JobListPage() {
   useEffect(() => {
     const q = query(collection(db, "jobs"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(q,
-      snap => { setJobs([...snap.docs.map(d => ({ id: d.id, ...d.data() })), ...JOBS]); setLoading(false); },
-      () => { setJobs(JOBS); setLoading(false); }
+      snap => { setJobs(snap.docs.map(d => ({ id: d.id, ...d.data() }))); setLoading(false); },
+      () => { setJobs([]); setLoading(false); }
     );
     return () => unsub();
   }, []);
@@ -161,7 +168,7 @@ export default function JobListPage() {
                   <div style={{display:"flex", alignItems:"center", gap:10, marginBottom:8}}>
                     <Badge color={tc} bg={bc}>{jobType}</Badge>
                     <span style={{fontSize:12, color:"#94a3b8", display:"flex", alignItems:"center", gap:3}}>
-                      <ClockIcon/>{j.date || (j.createdAt || "").slice(0,10)}
+                      <ClockIcon/>{j.date || fmtDate(j.createdAt)}
                     </span>
                   </div>
                   <h3 style={{fontSize:17, fontWeight:700, color:"#1e293b", marginBottom:8}}>{j.title}</h3>
