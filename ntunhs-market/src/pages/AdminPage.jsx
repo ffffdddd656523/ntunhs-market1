@@ -10,6 +10,10 @@ const STATUS_LABELS = {
   courses:  { sold: '已換課', active: '尋找中',   toggleLabel: '✅ 標記換課',  unToggleLabel: '↩️ 取消換課' },
 };
 
+const PRODUCT_CATS = ['書籍','彩妝','衣服','生活用品','綜合物品'];
+const JOB_CATS     = ['校內工讀','校外兼職','實習機會'];
+const COURSE_CATS  = ['必修課程','選修課程'];
+
 // ─── 示範資料 ───────────────────────────────────────────
 const SEED_PRODUCTS = [
   { image:"https://images.unsplash.com/photo-1544717305-2782549b5136?w=600", title:"護理學原理 第八版", price:350, category:"書籍", description:"九成新，無畫記，適合大一使用", authorName:"王小明", authorDept:"護理系" },
@@ -21,7 +25,6 @@ const SEED_PRODUCTS = [
   { image:"https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=600", title:"實習白褲", price:180, category:"衣服", description:"L號，洗過兩次，幾乎全新", authorName:"陳小美", authorDept:"高齡健康照護系" },
   { image:"https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600", title:"桌上型檯燈", price:200, category:"生活用品", description:"LED護眼檯燈，宿舍用", authorName:"張大明", authorDept:"資訊管理系" },
 ];
-
 const SEED_JOBS = [
   { title:"徵咖啡廳工讀生", category:"校內工讀", location:"學生餐廳旁", salary:"時薪 NT$ 190", hours:"彈性排班", description:"校內咖啡廳徵工讀生，工作內容包含飲料製作、收銀、環境整理。", contact:"Line: cafe123", authorName:"學生餐廳" },
   { title:"圖書館助理", category:"校內工讀", location:"圖書館", salary:"時薪 NT$ 185", hours:"週一至週五 14:00-17:00", description:"協助圖書上架、整理、借還書作業。", contact:"Email: library@ntunhs.edu.tw", authorName:"圖書館" },
@@ -30,7 +33,6 @@ const SEED_JOBS = [
   { title:"實驗室助理", category:"實習機會", location:"護理系實驗室", salary:"月薪 NT$ 8,000", hours:"每週 10 小時", description:"協助教授進行研究，整理實驗數據，適合對研究有興趣的學生。", contact:"Email: prof.wang@ntunhs.edu.tw", authorName:"王教授" },
   { title:"便利商店大夜班", category:"校外兼職", location:"學校附近7-11", salary:"時薪 NT$ 220", hours:"23:00-07:00", description:"徵夜班工讀生，工作環境單純，適合夜貓子。", contact:"手機：0987-654-321", authorName:"便利商店" },
 ];
-
 const SEED_COURSES = [
   { title:"週三2-4換週五2-4", category:"必修課程", courseName:"解剖學", currentTime:"週三 13:10-15:00", desiredTime:"週五 13:10-15:00", reason:"週三有其他事情無法上課", contact:"Line: student123", authorName:"李小華", authorDept:"護理系" },
   { title:"生理學換時段", category:"必修課程", courseName:"生理學", currentTime:"週一 10:10-12:00", desiredTime:"週二或週四同時段", reason:"想調整課表，配合打工時間", contact:"Email: student002@ntunhs.edu.tw", authorName:"張大明", authorDept:"護理系" },
@@ -40,12 +42,25 @@ const SEED_COURSES = [
 ];
 // ────────────────────────────────────────────────────────
 
+// Input 樣式
+const inp = { width:'100%', padding:'9px 12px', border:'1.5px solid #e2e8f0', borderRadius:8, fontSize:13, outline:'none', boxSizing:'border-box', fontFamily:'inherit' };
+const inpFocus = { border:'1.5px solid #0ea5e9' };
+
+function Field({ label, children }) {
+  return (
+    <div style={{ marginBottom:14 }}>
+      <div style={{ fontSize:12, color:'#475569', fontWeight:600, marginBottom:5 }}>{label}</div>
+      {children}
+    </div>
+  );
+}
+
 export default function AdminPage({ user }) {
   const [tab, setTab] = useState('products');
   const [data, setData] = useState({ products: [], jobs: [], courses: [] });
   const [loading, setLoading] = useState(true);
-  const [editingId, setEditingId] = useState(null);
-  const [editImage, setEditImage] = useState('');
+  const [editingItem, setEditingItem] = useState(null);   // 正在編輯的 item
+  const [editFields, setEditFields] = useState({});        // 編輯中的欄位值
   const [saving, setSaving] = useState(false);
   const [toggling, setToggling] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
@@ -82,49 +97,26 @@ export default function AdminPage({ user }) {
     setSeedLoading(true);
     try {
       const now = serverTimestamp();
-      const prodDocs = await Promise.all(
-        SEED_PRODUCTS.map(p => addDoc(collection(db, 'products'), { ...p, createdAt: now }))
-      );
-      const jobDocs = await Promise.all(
-        SEED_JOBS.map(j => addDoc(collection(db, 'jobs'), { ...j, createdAt: now }))
-      );
-      const courseDocs = await Promise.all(
-        SEED_COURSES.map(c => addDoc(collection(db, 'courses'), { ...c, createdAt: now }))
-      );
-      // 更新本地狀態
+      const prodDocs   = await Promise.all(SEED_PRODUCTS.map(p => addDoc(collection(db,'products'),{...p,createdAt:now})));
+      const jobDocs    = await Promise.all(SEED_JOBS.map(j    => addDoc(collection(db,'jobs'),    {...j,createdAt:now})));
+      const courseDocs = await Promise.all(SEED_COURSES.map(c => addDoc(collection(db,'courses'), {...c,createdAt:now})));
       setData(prev => ({
-        products: [
-          ...SEED_PRODUCTS.map((p, i) => ({ id: prodDocs[i].id, _col: 'products', ...p })),
-          ...prev.products,
-        ],
-        jobs: [
-          ...SEED_JOBS.map((j, i) => ({ id: jobDocs[i].id, _col: 'jobs', ...j })),
-          ...prev.jobs,
-        ],
-        courses: [
-          ...SEED_COURSES.map((c, i) => ({ id: courseDocs[i].id, _col: 'courses', ...c })),
-          ...prev.courses,
-        ],
+        products: [...SEED_PRODUCTS.map((p,i)=>({id:prodDocs[i].id,  _col:'products',...p})), ...prev.products],
+        jobs:     [...SEED_JOBS.map((j,i)    =>({id:jobDocs[i].id,   _col:'jobs',    ...j})), ...prev.jobs],
+        courses:  [...SEED_COURSES.map((c,i) =>({id:courseDocs[i].id,_col:'courses', ...c})), ...prev.courses],
       }));
       setSeedDone(true);
       setTimeout(() => setSeedDone(false), 4000);
-    } catch (e) {
-      alert('匯入失敗：' + e.message);
-    }
+    } catch (e) { alert('匯入失敗：' + e.message); }
     setSeedLoading(false);
   };
 
   const handleDelete = async (item) => {
     try {
       await deleteDoc(doc(db, item._col, item.id));
-      setData(prev => ({
-        ...prev,
-        [item._col]: prev[item._col].filter(p => p.id !== item.id),
-      }));
+      setData(prev => ({ ...prev, [item._col]: prev[item._col].filter(p => p.id !== item.id) }));
       setConfirmDelete(null);
-    } catch (e) {
-      alert('刪除失敗：' + e.message);
-    }
+    } catch (e) { alert('刪除失敗：' + e.message); }
   };
 
   const handleToggleStatus = async (item) => {
@@ -132,55 +124,56 @@ export default function AdminPage({ user }) {
     setToggling(item.id);
     try {
       await updateDoc(doc(db, item._col, item.id), { status: newStatus });
-      setData(prev => ({
-        ...prev,
-        [item._col]: prev[item._col].map(p =>
-          p.id === item.id ? { ...p, status: newStatus } : p
-        ),
-      }));
-    } catch (e) {
-      alert('更新狀態失敗：' + e.message);
-    }
+      setData(prev => ({ ...prev, [item._col]: prev[item._col].map(p => p.id===item.id ? {...p,status:newStatus} : p) }));
+    } catch (e) { alert('更新狀態失敗：' + e.message); }
     setToggling(null);
   };
 
-  const startEdit = (item) => {
-    setEditingId(item.id);
-    setEditImage(item.image || '');
+  // 開啟編輯 Modal
+  const openEdit = (item) => {
+    setEditingItem(item);
+    setEditFields({ ...item });   // 複製所有欄位
   };
 
+  // 欄位變更
+  const setF = (key, val) => setEditFields(prev => ({ ...prev, [key]: val }));
+
+  // 從電腦選圖 → base64
   const handleEditFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onloadend = () => setEditImage(reader.result);
+    reader.onloadend = () => setF('image', reader.result);
     reader.readAsDataURL(file);
   };
 
-  const saveEdit = async (item) => {
-    if (!editImage.trim()) return;
+  // 儲存全部欄位
+  const saveEdit = async () => {
+    if (!editingItem) return;
     setSaving(true);
     try {
-      await updateDoc(doc(db, item._col, item.id), { image: editImage.trim() });
+      // 過濾掉 _col / id 等本地欄位，不存進 Firestore
+      const { id, _col, ...rest } = editFields;
+      // price 轉數字
+      if (rest.price !== undefined && rest.price !== '') rest.price = Number(rest.price);
+      await updateDoc(doc(db, editingItem._col, editingItem.id), rest);
       setData(prev => ({
         ...prev,
-        [item._col]: prev[item._col].map(p =>
-          p.id === item.id ? { ...p, image: editImage.trim() } : p
+        [editingItem._col]: prev[editingItem._col].map(p =>
+          p.id === editingItem.id ? { ...p, ...rest } : p
         ),
       }));
-      setSaved(item.id);
-      setTimeout(() => setSaved(null), 2000);
-      setEditingId(null);
-    } catch (e) {
-      alert('儲存失敗：' + e.message);
-    }
+      setSaved(editingItem.id);
+      setTimeout(() => setSaved(null), 2500);
+      setEditingItem(null);
+    } catch (e) { alert('儲存失敗：' + e.message); }
     setSaving(false);
   };
 
   const fmtDate = (v) => {
     if (!v) return '';
-    if (typeof v === 'string') return v.slice(0, 10);
-    if (v && v.seconds) return new Date(v.seconds * 1000).toLocaleDateString('zh-TW');
+    if (typeof v === 'string') return v.slice(0,10);
+    if (v?.seconds) return new Date(v.seconds*1000).toLocaleDateString('zh-TW');
     return '';
   };
 
@@ -223,11 +216,7 @@ export default function AdminPage({ user }) {
             <button
               onClick={handleSeedData}
               disabled={seedLoading}
-              style={{
-                padding:'8px 16px', background: seedDone ? '#22c55e' : 'rgba(255,255,255,.18)',
-                border:'1.5px solid rgba(255,255,255,.35)', borderRadius:10, color:'#fff',
-                cursor:'pointer', fontWeight:700, fontSize:13, transition:'all .2s',
-              }}
+              style={{ padding:'8px 16px', background: seedDone ? '#22c55e' : 'rgba(255,255,255,.18)', border:'1.5px solid rgba(255,255,255,.35)', borderRadius:10, color:'#fff', cursor:'pointer', fontWeight:700, fontSize:13 }}
             >
               {seedLoading ? '匯入中...' : seedDone ? '✓ 匯入完成！' : '📥 匯入示範資料'}
             </button>
@@ -235,7 +224,6 @@ export default function AdminPage({ user }) {
         </div>
       </div>
 
-      {/* Error display */}
       {error && (
         <div style={{ background:'#fef2f2', border:'1.5px solid #fca5a5', borderRadius:12, padding:'16px 20px', marginBottom:20, color:'#dc2626', fontSize:13, fontWeight:600 }}>
           ⚠️ 載入錯誤：{error}
@@ -247,13 +235,8 @@ export default function AdminPage({ user }) {
         {TABS.map(t => (
           <button
             key={t.key}
-            onClick={() => { setTab(t.key); setEditingId(null); }}
-            style={{
-              padding:'10px 20px', borderRadius:10, border:'none', cursor:'pointer',
-              background: tab===t.key ? '#0ea5e9' : '#f1f5f9',
-              color: tab===t.key ? '#fff' : '#475569',
-              fontWeight:700, fontSize:14,
-            }}
+            onClick={() => setTab(t.key)}
+            style={{ padding:'10px 20px', borderRadius:10, border:'none', cursor:'pointer', background: tab===t.key ? '#0ea5e9' : '#f1f5f9', color: tab===t.key ? '#fff' : '#475569', fontWeight:700, fontSize:14 }}
           >
             {t.emoji} {t.label}（{data[t.key].length}）
           </button>
@@ -263,8 +246,7 @@ export default function AdminPage({ user }) {
       {/* Content */}
       {loading ? (
         <div style={{ textAlign:'center', padding:'60px', color:'#94a3b8' }}>
-          <div style={{ fontSize:32, marginBottom:10 }}>⏳</div>
-          <p>載入中...</p>
+          <div style={{ fontSize:32, marginBottom:10 }}>⏳</div><p>載入中...</p>
         </div>
       ) : currentItems.length === 0 ? (
         <div style={{ textAlign:'center', padding:'60px', color:'#94a3b8', background:'#fff', borderRadius:16, boxShadow:'0 1px 8px rgba(0,0,0,.06)' }}>
@@ -290,8 +272,7 @@ export default function AdminPage({ user }) {
                 {item.image && (
                   <div style={{ position:'relative', flexShrink:0 }}>
                     <img
-                      src={editingId===item.id && editImage ? editImage : item.image}
-                      alt={item.title || ''}
+                      src={item.image} alt={item.title||''}
                       style={{ width:80, height:80, objectFit:'cover', borderRadius:10, border:'1.5px solid #e2e8f0' }}
                       onError={e => { e.target.style.display='none'; }}
                     />
@@ -305,92 +286,192 @@ export default function AdminPage({ user }) {
                 <div style={{ flex:1, minWidth:200 }}>
                   <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:5, flexWrap:'wrap' }}>
                     <span style={{ fontWeight:700, fontSize:15, color:'#1e293b' }}>{item.title}</span>
-                    {item.price && <span style={{ fontSize:13, fontWeight:700, color: isSold ? '#94a3b8' : '#0ea5e9', textDecoration: isSold ? 'line-through' : 'none' }}>NT$ {item.price}</span>}
+                    {item.price && <span style={{ fontSize:13, fontWeight:700, color: isSold?'#94a3b8':'#0ea5e9', textDecoration: isSold?'line-through':'none' }}>NT$ {item.price}</span>}
                     {item.category && <span style={{ fontSize:11, background:'#f1f5f9', color:'#64748b', padding:'2px 8px', borderRadius:6 }}>{item.category}</span>}
-                    {isSold && (
-                      <span style={{ fontSize:11, background:'#fef2f2', color:'#ef4444', fontWeight:700, padding:'2px 8px', borderRadius:6 }}>{sl.sold}</span>
-                    )}
+                    {isSold && <span style={{ fontSize:11, background:'#fef2f2', color:'#ef4444', fontWeight:700, padding:'2px 8px', borderRadius:6 }}>{sl.sold}</span>}
                     {saved===item.id && <span style={{ fontSize:12, color:'#22c55e', fontWeight:600 }}>✓ 已儲存</span>}
                   </div>
-                  <div style={{ fontSize:12, color:'#94a3b8', marginBottom:6 }}>
-                    發布者：{item.authorName || item.poster || '—'}
-                    {item.authorDept && <span style={{ marginLeft:4 }}>· {item.authorDept}</span>}
-                    {fmtDate(item.createdAt || item.date) && <span style={{ marginLeft:4 }}>· {fmtDate(item.createdAt || item.date)}</span>}
+                  <div style={{ fontSize:12, color:'#94a3b8', marginBottom:4 }}>
+                    發布者：{item.authorName||item.poster||'—'}
+                    {item.authorDept && <span>・{item.authorDept}</span>}
+                    {fmtDate(item.createdAt||item.date) && <span>・{fmtDate(item.createdAt||item.date)}</span>}
                   </div>
+                  {/* 打工額外資訊 */}
+                  {tab==='jobs' && (item.location||item.salary) && (
+                    <div style={{ fontSize:12, color:'#64748b', marginBottom:4 }}>
+                      {item.location && <span>📍 {item.location}　</span>}
+                      {item.salary   && <span>💰 {item.salary}　</span>}
+                      {item.hours    && <span>⏰ {item.hours}</span>}
+                    </div>
+                  )}
+                  {/* 換課額外資訊 */}
+                  {tab==='courses' && (item.courseName||item.currentTime) && (
+                    <div style={{ fontSize:12, color:'#64748b', marginBottom:4 }}>
+                      {item.courseName   && <span>📖 {item.courseName}　</span>}
+                      {item.currentTime  && <span>{item.currentTime} → </span>}
+                      {item.desiredTime  && <span>{item.desiredTime}</span>}
+                    </div>
+                  )}
                   {item.description && (
-                    <p style={{ fontSize:13, color:'#64748b', marginBottom:8, lineHeight:1.5 }}>
-                      {item.description.length > 80 ? item.description.slice(0,80)+'…' : item.description}
+                    <p style={{ fontSize:13, color:'#64748b', margin:'4px 0 0', lineHeight:1.5 }}>
+                      {item.description.length>80 ? item.description.slice(0,80)+'…' : item.description}
                     </p>
                   )}
-                  {editingId===item.id && (
-                    <div style={{ marginTop:8 }}>
-                      <div style={{ fontSize:12, color:'#475569', fontWeight:600, marginBottom:8 }}>修改圖片</div>
-                      {/* 預覽 */}
-                      {editImage && (
-                        <img src={editImage} alt="預覽" style={{ width:120, height:80, objectFit:'cover', borderRadius:8, marginBottom:8, border:'1.5px solid #e2e8f0' }}/>
-                      )}
-                      {/* 上傳本機圖片 */}
-                      <div style={{ marginBottom:8 }}>
-                        <label style={{
-                          display:'inline-flex', alignItems:'center', gap:6,
-                          padding:'8px 14px', background:'#f0f9ff', border:'1.5px solid #0ea5e9',
-                          borderRadius:8, cursor:'pointer', fontSize:13, fontWeight:600, color:'#0ea5e9'
-                        }}>
-                          📷 從電腦選圖
-                          <input type="file" accept="image/*" onChange={handleEditFile} style={{ display:'none' }}/>
-                        </label>
-                      </div>
-                      {/* 或貼上網址 */}
-                      <div style={{ fontSize:11, color:'#94a3b8', marginBottom:6 }}>或貼上圖片網址：</div>
-                      <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                        <input
-                          value={editImage.startsWith('data:') ? '' : editImage}
-                          onChange={e => setEditImage(e.target.value)}
-                          placeholder="https://images.unsplash.com/..."
-                          style={{ flex:1, minWidth:200, padding:'8px 12px', border:'1.5px solid #e2e8f0', borderRadius:8, fontSize:13, outline:'none' }}
-                        />
-                        <button
-                          onClick={() => saveEdit(item)}
-                          disabled={saving || !editImage.trim()}
-                          style={{ padding:'8px 18px', background:'linear-gradient(135deg,#0ea5e9,#0284c7)', color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontWeight:700, fontSize:13 }}
-                        >{saving ? '儲存中...' : '✓ 儲存'}</button>
-                        <button
-                          onClick={() => setEditingId(null)}
-                          style={{ padding:'8px 12px', background:'#f1f5f9', color:'#64748b', border:'none', borderRadius:8, cursor:'pointer', fontSize:13 }}
-                        >取消</button>
-                      </div>
-                    </div>
-                  )}
                 </div>
-                {editingId!==item.id && (
-                  <div style={{ display:'flex', flexDirection:'column', gap:8, flexShrink:0 }}>
+                {/* 操作按鈕 */}
+                <div style={{ display:'flex', flexDirection:'column', gap:8, flexShrink:0 }}>
+                  <button
+                    onClick={() => handleToggleStatus(item)}
+                    disabled={toggling===item.id}
+                    style={{ padding:'8px 14px', border:'none', borderRadius:8, cursor:'pointer', fontWeight:600, fontSize:13, background: isSold?'#fff7ed':'#f0fdf4', color: isSold?'#ea580c':'#16a34a' }}
+                  >
+                    {toggling===item.id ? '更新中...' : (isSold ? sl.unToggleLabel : sl.toggleLabel)}
+                  </button>
+                  <div style={{ display:'flex', gap:8 }}>
                     <button
-                      onClick={() => handleToggleStatus(item)}
-                      disabled={toggling === item.id}
-                      style={{
-                        padding:'8px 14px', border:'none', borderRadius:8, cursor:'pointer',
-                        fontWeight:600, fontSize:13,
-                        background: isSold ? '#fff7ed' : '#f0fdf4',
-                        color: isSold ? '#ea580c' : '#16a34a',
-                      }}
-                    >
-                      {toggling === item.id ? '更新中...' : (isSold ? sl.unToggleLabel : sl.toggleLabel)}
-                    </button>
-                    <div style={{ display:'flex', gap:8 }}>
-                      <button
-                        onClick={() => startEdit(item)}
-                        style={{ flex:1, padding:'8px 10px', background:'#f8fafc', border:'1.5px solid #e2e8f0', borderRadius:8, cursor:'pointer', fontWeight:600, fontSize:12, color:'#475569' }}
-                      >✏️ 修改圖片</button>
-                      <button
-                        onClick={() => setConfirmDelete(item)}
-                        style={{ flex:1, padding:'8px 10px', background:'#fff1f2', border:'1.5px solid #fecdd3', borderRadius:8, cursor:'pointer', fontWeight:600, fontSize:12, color:'#e11d48' }}
-                      >🗑️ 刪除</button>
-                    </div>
+                      onClick={() => openEdit(item)}
+                      style={{ flex:1, padding:'8px 10px', background:'#f0f9ff', border:'1.5px solid #0ea5e9', borderRadius:8, cursor:'pointer', fontWeight:600, fontSize:12, color:'#0ea5e9' }}
+                    >✏️ 編輯貼文</button>
+                    <button
+                      onClick={() => setConfirmDelete(item)}
+                      style={{ flex:1, padding:'8px 10px', background:'#fff1f2', border:'1.5px solid #fecdd3', borderRadius:8, cursor:'pointer', fontWeight:600, fontSize:12, color:'#e11d48' }}
+                    >🗑️ 刪除</button>
                   </div>
-                )}
+                </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* ══ 編輯 Modal ══ */}
+      {editingItem && (
+        <div
+          onClick={() => !saving && setEditingItem(null)}
+          style={{ position:'fixed', inset:0, background:'rgba(15,23,42,.5)', zIndex:300, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background:'#fff', borderRadius:20, padding:'28px 28px', maxWidth:560, width:'100%', boxShadow:'0 24px 80px rgba(0,0,0,.2)', maxHeight:'90vh', overflowY:'auto' }}
+          >
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+              <h2 style={{ fontSize:18, fontWeight:800, color:'#1e293b' }}>✏️ 編輯貼文</h2>
+              <button onClick={() => setEditingItem(null)} style={{ background:'none', border:'none', fontSize:22, cursor:'pointer', color:'#94a3b8', lineHeight:1 }}>×</button>
+            </div>
+
+            {/* ── 共用欄位 ── */}
+            <Field label="標題 *">
+              <input
+                style={inp} value={editFields.title||''}
+                onChange={e => setF('title', e.target.value)}
+                placeholder="貼文標題"
+              />
+            </Field>
+
+            <Field label="類別">
+              <select
+                style={inp} value={editFields.category||''}
+                onChange={e => setF('category', e.target.value)}
+              >
+                <option value="">— 選擇類別 —</option>
+                {(editingItem._col==='products' ? PRODUCT_CATS
+                  : editingItem._col==='jobs'   ? JOB_CATS
+                  : COURSE_CATS
+                ).map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </Field>
+
+            <Field label="描述">
+              <textarea
+                style={{ ...inp, minHeight:80, resize:'vertical' }}
+                value={editFields.description||''}
+                onChange={e => setF('description', e.target.value)}
+                placeholder="詳細說明..."
+              />
+            </Field>
+
+            {/* ── 商品專屬欄位 ── */}
+            {editingItem._col==='products' && (<>
+              <Field label="價格（NT$）">
+                <input
+                  style={inp} type="number" min="0"
+                  value={editFields.price||''}
+                  onChange={e => setF('price', e.target.value)}
+                  placeholder="例：350"
+                />
+              </Field>
+              <Field label="圖片">
+                {editFields.image && (
+                  <img src={editFields.image} alt="預覽" style={{ width:'100%', maxHeight:160, objectFit:'cover', borderRadius:10, marginBottom:8, border:'1.5px solid #e2e8f0' }}/>
+                )}
+                <label style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'8px 14px', background:'#f0f9ff', border:'1.5px solid #0ea5e9', borderRadius:8, cursor:'pointer', fontSize:13, fontWeight:600, color:'#0ea5e9', marginBottom:8 }}>
+                  📷 從電腦選圖
+                  <input type="file" accept="image/*" onChange={handleEditFile} style={{ display:'none' }}/>
+                </label>
+                <div style={{ fontSize:11, color:'#94a3b8', marginBottom:6 }}>或貼上圖片網址：</div>
+                <input
+                  style={inp}
+                  value={editFields.image?.startsWith('data:') ? '' : (editFields.image||'')}
+                  onChange={e => setF('image', e.target.value)}
+                  placeholder="https://..."
+                />
+              </Field>
+            </>)}
+
+            {/* ── 打工專屬欄位 ── */}
+            {editingItem._col==='jobs' && (<>
+              <Field label="地點">
+                <input style={inp} value={editFields.location||''} onChange={e=>setF('location',e.target.value)} placeholder="例：石牌捷運站旁"/>
+              </Field>
+              <Field label="薪資">
+                <input style={inp} value={editFields.salary||''} onChange={e=>setF('salary',e.target.value)} placeholder="例：時薪 NT$ 190"/>
+              </Field>
+              <Field label="時間 / 班表">
+                <input style={inp} value={editFields.hours||''} onChange={e=>setF('hours',e.target.value)} placeholder="例：週末彈性排班"/>
+              </Field>
+              <Field label="聯絡方式">
+                <input style={inp} value={editFields.contact||''} onChange={e=>setF('contact',e.target.value)} placeholder="例：Line: abc123"/>
+              </Field>
+            </>)}
+
+            {/* ── 換課專屬欄位 ── */}
+            {editingItem._col==='courses' && (<>
+              <Field label="課程名稱">
+                <input style={inp} value={editFields.courseName||''} onChange={e=>setF('courseName',e.target.value)} placeholder="例：解剖學"/>
+              </Field>
+              <Field label="目前時段">
+                <input style={inp} value={editFields.currentTime||''} onChange={e=>setF('currentTime',e.target.value)} placeholder="例：週三 13:10-15:00"/>
+              </Field>
+              <Field label="希望換到的時段">
+                <input style={inp} value={editFields.desiredTime||''} onChange={e=>setF('desiredTime',e.target.value)} placeholder="例：週五 13:10-15:00"/>
+              </Field>
+              <Field label="換課原因">
+                <textarea
+                  style={{ ...inp, minHeight:60, resize:'vertical' }}
+                  value={editFields.reason||''}
+                  onChange={e=>setF('reason',e.target.value)}
+                  placeholder="說明為什麼想換課..."
+                />
+              </Field>
+              <Field label="聯絡方式">
+                <input style={inp} value={editFields.contact||''} onChange={e=>setF('contact',e.target.value)} placeholder="例：Line: abc123"/>
+              </Field>
+            </>)}
+
+            {/* ── 儲存 / 取消 ── */}
+            <div style={{ display:'flex', gap:10, marginTop:8 }}>
+              <button
+                onClick={saveEdit}
+                disabled={saving || !editFields.title?.trim()}
+                style={{ flex:1, padding:'12px', background:'linear-gradient(135deg,#0ea5e9,#0284c7)', color:'#fff', border:'none', borderRadius:10, cursor:'pointer', fontWeight:700, fontSize:14 }}
+              >{saving ? '儲存中...' : '✓ 儲存變更'}</button>
+              <button
+                onClick={() => setEditingItem(null)}
+                disabled={saving}
+                style={{ padding:'12px 20px', background:'#f1f5f9', color:'#64748b', border:'none', borderRadius:10, cursor:'pointer', fontWeight:600, fontSize:14 }}
+              >取消</button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -409,14 +490,8 @@ export default function AdminPage({ user }) {
             <p style={{ fontSize:14, color:'#64748b', marginBottom:8, fontWeight:600 }}>「{confirmDelete.title}」</p>
             <p style={{ fontSize:13, color:'#94a3b8', marginBottom:28 }}>刪除後無法復原，確定要繼續嗎？</p>
             <div style={{ display:'flex', gap:12, justifyContent:'center' }}>
-              <button
-                onClick={() => setConfirmDelete(null)}
-                style={{ padding:'11px 28px', background:'#f1f5f9', border:'none', borderRadius:10, cursor:'pointer', fontWeight:600, color:'#475569', fontSize:14 }}
-              >取消</button>
-              <button
-                onClick={() => handleDelete(confirmDelete)}
-                style={{ padding:'11px 28px', background:'linear-gradient(135deg,#e11d48,#be123c)', color:'#fff', border:'none', borderRadius:10, cursor:'pointer', fontWeight:700, fontSize:14 }}
-              >確認刪除</button>
+              <button onClick={() => setConfirmDelete(null)} style={{ padding:'11px 28px', background:'#f1f5f9', border:'none', borderRadius:10, cursor:'pointer', fontWeight:600, color:'#475569', fontSize:14 }}>取消</button>
+              <button onClick={() => handleDelete(confirmDelete)} style={{ padding:'11px 28px', background:'linear-gradient(135deg,#e11d48,#be123c)', color:'#fff', border:'none', borderRadius:10, cursor:'pointer', fontWeight:700, fontSize:14 }}>確認刪除</button>
             </div>
           </div>
         </div>
