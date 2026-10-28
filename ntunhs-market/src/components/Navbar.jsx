@@ -19,7 +19,7 @@ export default function Navbar({ page, setPage, isLoggedIn }) {
         {/* Logo */}
         <button onClick={()=>setPage("home")} style={{display:"flex", alignItems:"center", gap:10, border:"none", background:"none", cursor:"pointer"}}>
           <div style={{width:40, height:40, background:"linear-gradient(135deg, #0ea5e9, #0284c7)", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center"}}>
-            <span style={{color:"#fff", fontSize:18, fontWeight:700}}>北</span>
+            <span style={{color:"#fff", fontSize:18, fontWeight:700}}>市</span>
           </div>
           <span style={{fontSize:16, fontWeight:700, color:"#1e293b"}}>北護 Market</span>
         </button>
