@@ -17,7 +17,7 @@ export default function JobListPage() {
         const q = query(collection(db, "jobs"), orderBy("createdAt", "desc"));
         const snap = await getDocs(q);
         const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        setJobs(items.length > 0 ? items : JOBS);
+        setJobs([...items, ...JOBS]);
       } catch {
         setJobs(JOBS);
       }

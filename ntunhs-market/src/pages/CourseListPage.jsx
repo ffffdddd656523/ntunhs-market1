@@ -17,7 +17,7 @@ export default function CourseListPage() {
         const q = query(collection(db, "courses"), orderBy("createdAt", "desc"));
         const snap = await getDocs(q);
         const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        setCourses(items.length > 0 ? items : COURSES);
+        setCourses([...items, ...COURSES]);
       } catch {
         setCourses(COURSES);
       }

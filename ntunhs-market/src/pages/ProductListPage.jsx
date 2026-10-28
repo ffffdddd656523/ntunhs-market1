@@ -29,10 +29,8 @@ export default function ProductListPage({ favorites, toggleFav, onView }) {
     fetchProducts();
   }, []);
 
-  // 合併：Firestore 資料優先，不足時補假資料
-  const allProducts = firestoreProducts.length > 0
-    ? firestoreProducts
-    : PRODUCTS;
+  // 合併：Firestore 真實商品排前面，假資料填後面
+  const allProducts = [...firestoreProducts, ...PRODUCTS];
 
   let filtered = allProducts.filter(p => {
     if (cat !== "all" && p.category !== cat) return false;
