@@ -16,6 +16,7 @@ import VisualSearchPage from './pages/VisualSearchPage';
 import { LoginPage, RegisterPage } from './pages/AuthPages';
 import ProfilePage from './pages/ProfilePage';
 import AdminPage from './pages/AdminPage';
+import SeedTool from './pages/SeedTool';
 
 // ── 路由對照表 ──────────────────────────────────────────
 const PAGE_TO_PATH = {
@@ -147,6 +148,8 @@ export default function App() {
             onView={goToProduct}
           />
         );
+      case 'seed':
+        return <SeedTool />;
       case 'product-detail':
         return selectedProduct
           ? (
