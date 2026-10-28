@@ -12,10 +12,10 @@ const TYPE_COLOR = {
 };
 
 function JobModal({ job, onClose }) {
+  const [copied, setCopied] = useState(false);
   if (!job) return null;
   const jobType = job.category || job.type || "校內工讀";
   const [tc, bc] = TYPE_COLOR[jobType] || ["#374151","#f3f4f6"];
-  const [copied, setCopied] = useState(false);
   const copy = () => {
     navigator.clipboard?.writeText(job.contact || "").then(() => {
       setCopied(true); setTimeout(() => setCopied(false), 2000);

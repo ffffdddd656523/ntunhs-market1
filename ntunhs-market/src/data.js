@@ -3,14 +3,14 @@
 // ============================================================
 
 export const PRODUCTS = [
-  { id:"1", image:"https://images.unsplash.com/photo-1588912914017-923900a34710?w=600", title:"護理學原理 第八版", price:350, category:"書籍", description:"九成新，無畫記，適合大一使用", date:"2天前", seller:"王小明", dept:"護理系" },
-  { id:"2", image:"https://images.unsplash.com/photo-1622799336313-e0cf42fc6180?w=600", title:"MAC 口紅套組", price:800, category:"彩妝", description:"全新未拆封，朋友送的用不到", date:"3天前", seller:"林小芳", dept:"護理系" },
-  { id:"3", image:"https://images.unsplash.com/photo-1646508905261-d3bd7e9afed4?w=600", title:"Uniqlo 白色襯衫", price:200, category:"衣服", description:"M號，實習用只穿過3次", date:"1週前", seller:"張大明", dept:"資訊管理系" },
-  { id:"4", image:"https://images.unsplash.com/photo-1761208158970-b0191292eb84?w=600", title:"宿舍小電扇", price:150, category:"生活用品", description:"功能正常，搬家出清", date:"5天前", seller:"陳小美", dept:"高齡健康照護系" },
-  { id:"5", image:"https://images.unsplash.com/photo-1588912914017-923900a34710?w=600", title:"解剖學講義", price:250, category:"書籍", description:"含筆記整理，八成新", date:"6天前", seller:"王小明", dept:"護理系" },
-  { id:"6", image:"https://images.unsplash.com/photo-1622799336313-e0cf42fc6180?w=600", title:"開架彩妝組", price:300, category:"彩妝", description:"眼影盤、腮紅，9成新", date:"1週前", seller:"李小華", dept:"護理系" },
-  { id:"7", image:"https://images.unsplash.com/photo-1646508905261-d3bd7e9afed4?w=600", title:"實習白褲", price:180, category:"衣服", description:"L號，洗過兩次，幾乎全新", date:"5天前", seller:"陳小美", dept:"高齡健康照護系" },
-  { id:"8", image:"https://images.unsplash.com/photo-1761208158970-b0191292eb84?w=600", title:"桌上型檯燈", price:200, category:"生活用品", description:"LED護眼檯燈，宿舍用", date:"1週前", seller:"張大明", dept:"資訊管理系" },
+  { id:"1", image:"https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=600", title:"護理學原理 第八版", price:350, category:"書籍", description:"九成新，無畫記，適合大一使用", date:"2天前", seller:"王小明", dept:"護理系" },
+  { id:"2", image:"https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=600", title:"MAC 口紅套組", price:800, category:"彩妝", description:"全新未拆封，朋友送的用不到", date:"3天前", seller:"林小芳", dept:"護理系" },
+  { id:"3", image:"https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600", title:"Uniqlo 白色襯衫", price:200, category:"衣服", description:"M號，實習用只穿過3次", date:"1週前", seller:"張大明", dept:"資訊管理系" },
+  { id:"4", image:"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600", title:"宿舍小電扇", price:150, category:"生活用品", description:"功能正常，搬家出清", date:"5天前", seller:"陳小美", dept:"高齡健康照護系" },
+  { id:"5", image:"https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=600", title:"解剖學講義", price:250, category:"書籍", description:"含筆記整理，八成新", date:"6天前", seller:"王小明", dept:"護理系" },
+  { id:"6", image:"https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=600", title:"開架彩妝組", price:300, category:"彩妝", description:"眼影盤、腮紅，9成新", date:"1週前", seller:"李小華", dept:"護理系" },
+  { id:"7", image:"https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=600", title:"實習白褲", price:180, category:"衣服", description:"L號，洗過兩次，幾乎全新", date:"5天前", seller:"陳小美", dept:"高齡健康照護系" },
+  { id:"8", image:"https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600", title:"桌上型檯燈", price:200, category:"生活用品", description:"LED護眼檯燈，宿舍用", date:"1週前", seller:"張大明", dept:"資訊管理系" },
 ];
 
 export const JOBS = [
