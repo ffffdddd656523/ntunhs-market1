@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { db } from '../firebase';
 import { SearchIcon, ClockIcon, MapPinIcon, DollarIcon } from '../components/Icons';
 import { Badge } from '../components/Common';
 import { JOBS } from '../data';
@@ -6,6 +8,23 @@ import { JOBS } from '../data';
 export default function JobListPage() {
   const [search, setSearch] = useState("");
   const [type, setType] = useState("all");
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        const q = query(collection(db, "jobs"), orderBy("createdAt", "desc"));
+        const snap = await getDocs(q);
+        const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setJobs(items.length > 0 ? items : JOBS);
+      } catch {
+        setJobs(JOBS);
+      }
+      setLoading(false);
+    };
+    fetchJobs();
+  }, []);
 
   const typeColor = {
     "校內工讀": ["#1d4ed8","#dbeafe"],
@@ -13,9 +32,9 @@ export default function JobListPage() {
     "實習機會": ["#15803d","#dcfce7"]
   };
 
-  const filtered = JOBS.filter(j => {
-    if (type !== "all" && j.type !== type) return false;
-    if (search && !j.title.includes(search) && !j.description.includes(search)) return false;
+  const filtered = jobs.filter(j => {
+    if (type !== "all" && j.category !== type && j.type !== type) return false;
+    if (search && !j.title?.includes(search) && !j.description?.includes(search)) return false;
     return true;
   });
 
@@ -37,36 +56,47 @@ export default function JobListPage() {
         ))}
       </div>
 
-      {/* Job List */}
-      <div style={{display:"flex", flexDirection:"column", gap:16}}>
-        {filtered.map(j => {
-          const [tc, bc] = typeColor[j.type] || ["#374151","#f3f4f6"];
-          return (
-            <div key={j.id} style={{background:"#fff", borderRadius:16, padding:"22px 24px", boxShadow:"0 2px 10px rgba(0,0,0,.06)", display:"flex", flexWrap:"wrap", gap:16, alignItems:"flex-start"}}>
-              <div style={{flex:1, minWidth:220}}>
-                <div style={{display:"flex", alignItems:"center", gap:10, marginBottom:8}}>
-                  <Badge color={tc} bg={bc}>{j.type}</Badge>
-                  <span style={{fontSize:12, color:"#94a3b8", display:"flex", alignItems:"center", gap:3}}>
-                    <ClockIcon/>{j.date}
-                  </span>
+      {loading ? (
+        <div style={{textAlign:"center", padding:"60px 0", color:"#94a3b8"}}>
+          <div style={{fontSize:32, marginBottom:12}}>⏳</div>
+          <p>載入中...</p>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div style={{textAlign:"center", padding:"60px 0", color:"#94a3b8"}}>
+          <p>找不到符合條件的打工資訊</p>
+        </div>
+      ) : (
+        <div style={{display:"flex", flexDirection:"column", gap:16}}>
+          {filtered.map(j => {
+            const jobType = j.category || j.type || "校內工讀";
+            const [tc, bc] = typeColor[jobType] || ["#374151","#f3f4f6"];
+            return (
+              <div key={j.id} style={{background:"#fff", borderRadius:16, padding:"22px 24px", boxShadow:"0 2px 10px rgba(0,0,0,.06)", display:"flex", flexWrap:"wrap", gap:16, alignItems:"flex-start"}}>
+                <div style={{flex:1, minWidth:220}}>
+                  <div style={{display:"flex", alignItems:"center", gap:10, marginBottom:8}}>
+                    <Badge color={tc} bg={bc}>{jobType}</Badge>
+                    <span style={{fontSize:12, color:"#94a3b8", display:"flex", alignItems:"center", gap:3}}>
+                      <ClockIcon/>{j.date || (j.createdAt || "").slice(0,10)}
+                    </span>
+                  </div>
+                  <h3 style={{fontSize:17, fontWeight:700, color:"#1e293b", marginBottom:8}}>{j.title}</h3>
+                  <p style={{fontSize:13, color:"#64748b", marginBottom:12, lineHeight:1.6}}>{j.description}</p>
+                  <div style={{display:"flex", flexWrap:"wrap", gap:12, fontSize:13, color:"#475569"}}>
+                    {j.location && <span style={{display:"flex", gap:4, alignItems:"center"}}><MapPinIcon/>{j.location}</span>}
+                    {j.salary && <span style={{display:"flex", gap:4, alignItems:"center"}}><DollarIcon/>{j.salary}</span>}
+                    {j.hours && <span style={{display:"flex", gap:4, alignItems:"center"}}><ClockIcon/>{j.hours}</span>}
+                  </div>
                 </div>
-                <h3 style={{fontSize:17, fontWeight:700, color:"#1e293b", marginBottom:8}}>{j.title}</h3>
-                <p style={{fontSize:13, color:"#64748b", marginBottom:12, lineHeight:1.6}}>{j.description}</p>
-                <div style={{display:"flex", flexWrap:"wrap", gap:12, fontSize:13, color:"#475569"}}>
-                  <span style={{display:"flex", gap:4, alignItems:"center"}}><MapPinIcon/>{j.location}</span>
-                  <span style={{display:"flex", gap:4, alignItems:"center"}}><DollarIcon/>{j.salary}</span>
-                  <span style={{display:"flex", gap:4, alignItems:"center"}}><ClockIcon/>{j.hours}</span>
+                <div style={{background:"#f8fafc", borderRadius:12, padding:"14px 16px", minWidth:180}}>
+                  <div style={{fontSize:12, color:"#94a3b8", marginBottom:4}}>聯絡方式</div>
+                  <div style={{fontSize:14, color:"#1e293b", fontWeight:600}}>{j.contact}</div>
+                  <div style={{fontSize:12, color:"#64748b", marginTop:6}}>發布者：{j.authorName || j.poster}</div>
                 </div>
               </div>
-              <div style={{background:"#f8fafc", borderRadius:12, padding:"14px 16px", minWidth:180}}>
-                <div style={{fontSize:12, color:"#94a3b8", marginBottom:4}}>聯絡方式</div>
-                <div style={{fontSize:14, color:"#1e293b", fontWeight:600}}>{j.contact}</div>
-                <div style={{fontSize:12, color:"#64748b", marginTop:6}}>發布者：{j.poster}</div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

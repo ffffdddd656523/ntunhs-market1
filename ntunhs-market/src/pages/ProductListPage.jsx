@@ -1,17 +1,42 @@
-﻿import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { db } from '../firebase';
 import { SearchIcon, FilterIcon } from '../components/Icons';
 import { ProductCard } from '../components/Common';
 import { PRODUCTS } from '../data';
 
-export default function ProductListPage({ favorites, toggleFav, onView }) {  const [search, setSearch] = useState("");
+export default function ProductListPage({ favorites, toggleFav, onView }) {
+  const [search, setSearch] = useState("");
   const [cat, setCat] = useState("all");
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
   const [sort, setSort] = useState("latest");
+  const [firestoreProducts, setFirestoreProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  let filtered = PRODUCTS.filter(p => {
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
+        const snap = await getDocs(q);
+        const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setFirestoreProducts(items);
+      } catch {
+        // Firestore 讀取失敗時用假資料
+      }
+      setLoading(false);
+    };
+    fetchProducts();
+  }, []);
+
+  // 合併：Firestore 資料優先，不足時補假資料
+  const allProducts = firestoreProducts.length > 0
+    ? firestoreProducts
+    : PRODUCTS;
+
+  let filtered = allProducts.filter(p => {
     if (cat !== "all" && p.category !== cat) return false;
-    if (search && !p.title.includes(search) && !p.description.includes(search)) return false;
+    if (search && !p.title?.includes(search) && !p.description?.includes(search)) return false;
     if (priceMin && p.price < +priceMin) return false;
     if (priceMax && p.price > +priceMax) return false;
     return true;
@@ -58,18 +83,30 @@ export default function ProductListPage({ favorites, toggleFav, onView }) {  con
 
         {/* Product Grid */}
         <main style={{flex:1, minWidth:0}}>
-          <p style={{color:"#64748b", fontSize:14, marginBottom:16}}>找到 <strong>{filtered.length}</strong> 個結果</p>
-          {filtered.length === 0 ? (
+          {loading ? (
             <div style={{textAlign:"center", padding:"60px 0", color:"#94a3b8"}}>
-              <SearchIcon/>
-              <p style={{marginTop:12}}>找不到符合條件的商品</p>
+              <div style={{fontSize:32, marginBottom:12}}>⏳</div>
+              <p>載入中...</p>
             </div>
           ) : (
-            <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(240px,1fr))", gap:18}}>
-              {filtered.map(p => (
-                <ProductCard key={p.id} product={p} onClick={onView} onFavorite={toggleFav} isFav={favorites.has(p.id)}/>
-              ))}
-            </div>
+            <>
+              <p style={{color:"#64748b", fontSize:14, marginBottom:16}}>
+                找到 <strong>{filtered.length}</strong> 個結果
+                {firestoreProducts.length > 0 && <span style={{marginLeft:8, fontSize:12, color:"#0ea5e9"}}>· 即時資料</span>}
+              </p>
+              {filtered.length === 0 ? (
+                <div style={{textAlign:"center", padding:"60px 0", color:"#94a3b8"}}>
+                  <SearchIcon/>
+                  <p style={{marginTop:12}}>找不到符合條件的商品</p>
+                </div>
+              ) : (
+                <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(240px,1fr))", gap:18}}>
+                  {filtered.map(p => (
+                    <ProductCard key={p.id} product={p} onClick={onView} onFavorite={toggleFav} isFav={favorites.has(p.id)}/>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </main>
       </div>
