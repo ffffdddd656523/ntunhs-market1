@@ -149,6 +149,14 @@ export default function AdminPage({ user }) {
     setEditImage(item.image || '');
   };
 
+  const handleEditFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => setEditImage(reader.result);
+    reader.readAsDataURL(file);
+  };
+
   const saveEdit = async (item) => {
     if (!editImage.trim()) return;
     setSaving(true);
@@ -316,14 +324,30 @@ export default function AdminPage({ user }) {
                   )}
                   {editingId===item.id && (
                     <div style={{ marginTop:8 }}>
-                      <div style={{ fontSize:12, color:'#475569', fontWeight:600, marginBottom:6 }}>修改圖片網址：</div>
+                      <div style={{ fontSize:12, color:'#475569', fontWeight:600, marginBottom:8 }}>修改圖片</div>
+                      {/* 預覽 */}
+                      {editImage && (
+                        <img src={editImage} alt="預覽" style={{ width:120, height:80, objectFit:'cover', borderRadius:8, marginBottom:8, border:'1.5px solid #e2e8f0' }}/>
+                      )}
+                      {/* 上傳本機圖片 */}
+                      <div style={{ marginBottom:8 }}>
+                        <label style={{
+                          display:'inline-flex', alignItems:'center', gap:6,
+                          padding:'8px 14px', background:'#f0f9ff', border:'1.5px solid #0ea5e9',
+                          borderRadius:8, cursor:'pointer', fontSize:13, fontWeight:600, color:'#0ea5e9'
+                        }}>
+                          📷 從電腦選圖
+                          <input type="file" accept="image/*" onChange={handleEditFile} style={{ display:'none' }}/>
+                        </label>
+                      </div>
+                      {/* 或貼上網址 */}
+                      <div style={{ fontSize:11, color:'#94a3b8', marginBottom:6 }}>或貼上圖片網址：</div>
                       <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
                         <input
-                          value={editImage}
+                          value={editImage.startsWith('data:') ? '' : editImage}
                           onChange={e => setEditImage(e.target.value)}
                           placeholder="https://images.unsplash.com/..."
-                          autoFocus
-                          style={{ flex:1, minWidth:240, padding:'8px 12px', border:'1.5px solid #0ea5e9', borderRadius:8, fontSize:13, outline:'none' }}
+                          style={{ flex:1, minWidth:200, padding:'8px 12px', border:'1.5px solid #e2e8f0', borderRadius:8, fontSize:13, outline:'none' }}
                         />
                         <button
                           onClick={() => saveEdit(item)}
