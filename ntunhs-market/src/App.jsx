@@ -32,6 +32,7 @@ const PAGE_TO_PATH = {
   'register':       '/register',
   'profile':        '/profile',
   'admin':          '/admin',
+  'seed':           '/seed',
 };
 
 const PATH_TO_PAGE = Object.fromEntries(

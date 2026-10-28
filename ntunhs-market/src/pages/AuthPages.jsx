@@ -6,10 +6,19 @@ import {
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
-const DEPTS = [
-  "護理學系","物理治療學系","職業治療學系","語言治療與聽力學系",
-  "醫學影像暨放射科學系","口腔衛生學系","健康照護管理學系",
-  "嬰幼兒保育系","文化事業發展學系","資訊管理系"
+const COLLEGES = [
+  {
+    name: "護理學院",
+    depts: ["護理學系","護理助產及婦女健康系所","高齡健康照護系所","醫護教育暨數位學習系所"]
+  },
+  {
+    name: "健康科技學院",
+    depts: ["健康事業管理系所","資訊管理系所","長期照護系所","休閒產業與健康促進系所","語言治療與聽力學系所"]
+  },
+  {
+    name: "人類發展與健康學院",
+    depts: ["嬰幼兒保育系","運動保健系","生死與健康心理諮商系"]
+  }
 ];
 
 // 學號 → Firebase 用的虛擬 email
@@ -25,7 +34,7 @@ export function LoginPage({ setPage, onLogin }) {
     e.preventDefault();
     setError("");
     const sid = form.studentId.trim();
-    if (!/^\d{9}$/.test(sid)) {
+    if (sid !== 'admin' && !/^\d{9}$/.test(sid)) {
       setError("學號格式不正確（請輸入 9 位數字）");
       return;
     }
@@ -230,7 +239,11 @@ export function RegisterPage({ setPage, onLogin }) {
                 <label style={{fontSize:14, fontWeight:600, color:"#374151", display:"block", marginBottom:6}}>科系 *</label>
                 <select required value={form.dept} onChange={e=>setForm({...form,dept:e.target.value})} style={{width:"100%", padding:"11px 10px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:13, outline:"none"}}>
                   <option value="">請選擇</option>
-                  {DEPTS.map(d => <option key={d} value={d}>{d}</option>)}
+                  {COLLEGES.map(c => (
+                    <optgroup key={c.name} label={c.name}>
+                      {c.depts.map(d => <option key={d} value={d}>{d}</option>)}
+                    </optgroup>
+                  ))}
                 </select>
               </div>
               <div>
