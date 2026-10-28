@@ -6,12 +6,12 @@ import { Badge } from '../components/Common';
 import { COURSES } from '../data';
 
 function CourseModal({ course, onClose }) {
+  const [copied, setCopied] = useState(false);
   if (!course) return null;
   const courseType = course.category || course.type || "必修課程";
   const [tc, bc] = courseType === "必修課程"
     ? ["#1d4ed8","#dbeafe"]
     : ["#7c3aed","#ede9fe"];
-  const [copied, setCopied] = useState(false);
   const copy = () => {
     navigator.clipboard?.writeText(course.contact || "").then(() => {
       setCopied(true); setTimeout(() => setCopied(false), 2000);
