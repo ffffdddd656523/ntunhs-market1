@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { XIcon, UploadIcon } from '../components/Icons';
@@ -7,8 +7,19 @@ export default function CreatePostPage({ setPage, isLoggedIn, user }) {
   const [form, setForm] = useState({type:"product", title:"", category:"", price:"", description:"", contact:""});
   const [img, setImg] = useState(null);
   const [submitted, setSubmitted] = useState(false);
+  const [submittedType, setSubmittedType] = useState("product");
+  const [countdown, setCountdown] = useState(3);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // 發布成功後 3 秒自動跳轉
+  useEffect(() => {
+    if (!submitted) return;
+    const dest = submittedType === "product" ? "products" : submittedType === "job" ? "jobs" : "courses";
+    if (countdown <= 0) { setPage(dest); return; }
+    const t = setTimeout(() => setCountdown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [submitted, countdown, submittedType, setPage]);
 
   const handleImg = e => {
     const f = e.target.files?.[0];
@@ -39,6 +50,7 @@ export default function CreatePostPage({ setPage, isLoggedIn, user }) {
         createdAt: new Date().toISOString(),
         likes: 0,
       });
+      setSubmittedType(form.type);
       setSubmitted(true);
     } catch (err) {
       setError("發布失敗，請再試一次：" + err.message);
@@ -57,21 +69,26 @@ export default function CreatePostPage({ setPage, isLoggedIn, user }) {
     </div>
   );
 
-  if (submitted) return (
-    <div style={{maxWidth:500, margin:"80px auto", textAlign:"center", padding:"0 20px"}}>
-      <div style={{fontSize:60, marginBottom:16}}>🎉</div>
-      <h2 style={{fontSize:22, fontWeight:800, color:"#1e293b", marginBottom:10}}>貼文發布成功！</h2>
-      <p style={{color:"#64748b", marginBottom:24}}>你的貼文已成功發布，等待買家聯絡。</p>
-      <div style={{display:"flex", gap:12, justifyContent:"center"}}>
-        <button onClick={()=>setPage("products")} style={{background:"linear-gradient(135deg,#0ea5e9,#0284c7)", color:"#fff", border:"none", padding:"12px 24px", borderRadius:10, cursor:"pointer", fontWeight:700}}>
-          瀏覽商品
-        </button>
-        <button onClick={()=>{setForm({type:"product",title:"",category:"",price:"",description:"",contact:""});setImg(null);setSubmitted(false)}} style={{background:"#f1f5f9", color:"#475569", border:"none", padding:"12px 24px", borderRadius:10, cursor:"pointer", fontWeight:600}}>
-          再發一篇
-        </button>
+  if (submitted) {
+    const dest = submittedType === "product" ? "products" : submittedType === "job" ? "jobs" : "courses";
+    const destLabel = submittedType === "product" ? "瀏覽商品" : submittedType === "job" ? "打工資訊" : "換課資訊";
+    return (
+      <div style={{maxWidth:500, margin:"80px auto", textAlign:"center", padding:"0 20px"}}>
+        <div style={{fontSize:60, marginBottom:16}}>🎉</div>
+        <h2 style={{fontSize:22, fontWeight:800, color:"#1e293b", marginBottom:10}}>貼文發布成功！</h2>
+        <p style={{color:"#64748b", marginBottom:8}}>你的貼文已成功發布，等待大家聯絡。</p>
+        <p style={{color:"#94a3b8", fontSize:13, marginBottom:24}}>{countdown} 秒後自動跳轉…</p>
+        <div style={{display:"flex", gap:12, justifyContent:"center"}}>
+          <button onClick={()=>setPage(dest)} style={{background:"linear-gradient(135deg,#0ea5e9,#0284c7)", color:"#fff", border:"none", padding:"12px 24px", borderRadius:10, cursor:"pointer", fontWeight:700}}>
+            {destLabel}
+          </button>
+          <button onClick={()=>{setForm({type:"product",title:"",category:"",price:"",description:"",contact:""});setImg(null);setSubmitted(false);setCountdown(3)}} style={{background:"#f1f5f9", color:"#475569", border:"none", padding:"12px 24px", borderRadius:10, cursor:"pointer", fontWeight:600}}>
+            再發一篇
+          </button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
   const catOptions = form.type==="product"
     ? ["書籍","彩妝","衣服","生活用品"]

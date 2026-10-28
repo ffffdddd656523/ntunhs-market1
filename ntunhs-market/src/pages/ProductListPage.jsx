@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '../firebase';
 import { SearchIcon, FilterIcon } from '../components/Icons';
 import { ProductCard } from '../components/Common';
@@ -15,18 +15,12 @@ export default function ProductListPage({ favorites, toggleFav, onView }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
-        const snap = await getDocs(q);
-        const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        setFirestoreProducts(items);
-      } catch {
-        // Firestore 讀取失敗時用假資料
-      }
-      setLoading(false);
-    };
-    fetchProducts();
+    const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
+    const unsub = onSnapshot(q,
+      snap => { setFirestoreProducts(snap.docs.map(d => ({ id: d.id, ...d.data() }))); setLoading(false); },
+      () => setLoading(false)
+    );
+    return () => unsub();
   }, []);
 
   // 合併：Firestore 真實商品排前面，假資料填後面

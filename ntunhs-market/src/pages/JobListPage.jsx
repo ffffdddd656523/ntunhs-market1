@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import { SearchIcon, ClockIcon, MapPinIcon, DollarIcon } from '../components/Icons';
 import { Badge } from '../components/Common';
@@ -12,18 +12,12 @@ export default function JobListPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchJobs = async () => {
-      try {
-        const q = query(collection(db, "jobs"), orderBy("createdAt", "desc"));
-        const snap = await getDocs(q);
-        const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        setJobs([...items, ...JOBS]);
-      } catch {
-        setJobs(JOBS);
-      }
-      setLoading(false);
-    };
-    fetchJobs();
+    const q = query(collection(db, "jobs"), orderBy("createdAt", "desc"));
+    const unsub = onSnapshot(q,
+      snap => { setJobs([...snap.docs.map(d => ({ id: d.id, ...d.data() })), ...JOBS]); setLoading(false); },
+      () => { setJobs(JOBS); setLoading(false); }
+    );
+    return () => unsub();
   }, []);
 
   const typeColor = {

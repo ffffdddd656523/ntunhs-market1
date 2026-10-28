@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import { SearchIcon, ClockIcon, UserIcon } from '../components/Icons';
 import { Badge } from '../components/Common';
@@ -12,18 +12,12 @@ export default function CourseListPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        const q = query(collection(db, "courses"), orderBy("createdAt", "desc"));
-        const snap = await getDocs(q);
-        const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        setCourses([...items, ...COURSES]);
-      } catch {
-        setCourses(COURSES);
-      }
-      setLoading(false);
-    };
-    fetchCourses();
+    const q = query(collection(db, "courses"), orderBy("createdAt", "desc"));
+    const unsub = onSnapshot(q,
+      snap => { setCourses([...snap.docs.map(d => ({ id: d.id, ...d.data() })), ...COURSES]); setLoading(false); },
+      () => { setCourses(COURSES); setLoading(false); }
+    );
+    return () => unsub();
   }, []);
 
   const filtered = courses.filter(c => {
