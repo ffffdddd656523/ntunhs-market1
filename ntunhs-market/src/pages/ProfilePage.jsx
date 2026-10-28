@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Trash2Icon, ShoppingBagIcon, BriefcaseIcon, RefreshIcon } from '../components/Icons';
 import { Avatar, ProductCard } from '../components/Common';
@@ -17,11 +17,116 @@ function TypeIcon({ type }) {
   return <RefreshIcon/>;
 }
 
+// ── 編輯 Modal ───────────────────────────────────────────
+function EditModal({ post, onClose, onSaved }) {
+  const [form, setForm] = useState({
+    title:       post.title       || "",
+    description: post.description || "",
+    contact:     post.contact     || "",
+    price:       post.price       || "",
+    category:    post.category    || "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [error,  setError]  = useState("");
+
+  const handleSave = async e => {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      const updates = {
+        title:       form.title.trim(),
+        description: form.description.trim(),
+        contact:     form.contact.trim(),
+        category:    form.category,
+      };
+      if (post.postType === "product") updates.price = Number(form.price);
+      await updateDoc(doc(db, POST_TYPE_MAP[post.postType], post.id), updates);
+      onSaved({ ...post, ...updates });
+    } catch (err) {
+      setError("儲存失敗：" + err.message);
+    }
+    setSaving(false);
+  };
+
+  const catOptions = post.postType === "product"
+    ? ["書籍","彩妝","衣服","生活用品"]
+    : post.postType === "job"
+    ? ["校內工讀","校外兼職","實習機會"]
+    : ["必修課程","選修課程"];
+
+  return (
+    <div style={{position:"fixed", inset:0, background:"rgba(0,0,0,.45)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:20}}>
+      <div style={{background:"#fff", borderRadius:20, padding:"32px 28px", width:"100%", maxWidth:500, maxHeight:"90vh", overflowY:"auto", boxShadow:"0 8px 40px rgba(0,0,0,.18)"}}>
+        <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:24}}>
+          <h3 style={{fontSize:18, fontWeight:800, color:"#1e293b"}}>編輯貼文</h3>
+          <button onClick={onClose} style={{border:"none", background:"#f1f5f9", borderRadius:8, width:32, height:32, cursor:"pointer", fontSize:16, color:"#64748b"}}>✕</button>
+        </div>
+
+        {error && (
+          <div style={{background:"#fef2f2", border:"1px solid #fecaca", borderRadius:10, padding:"10px 14px", marginBottom:16, color:"#dc2626", fontSize:13}}>
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSave}>
+          <div style={{marginBottom:16}}>
+            <label style={{fontSize:13, fontWeight:600, color:"#374151", display:"block", marginBottom:6}}>標題 *</label>
+            <input required value={form.title} onChange={e=>setForm({...form,title:e.target.value})}
+              style={{width:"100%", padding:"10px 12px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", boxSizing:"border-box"}}/>
+          </div>
+
+          <div style={{marginBottom:16}}>
+            <label style={{fontSize:13, fontWeight:600, color:"#374151", display:"block", marginBottom:6}}>類別</label>
+            <select value={form.category} onChange={e=>setForm({...form,category:e.target.value})}
+              style={{width:"100%", padding:"10px 12px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none"}}>
+              {catOptions.map(o=><option key={o} value={o}>{o}</option>)}
+            </select>
+          </div>
+
+          {post.postType === "product" && (
+            <div style={{marginBottom:16}}>
+              <label style={{fontSize:13, fontWeight:600, color:"#374151", display:"block", marginBottom:6}}>價格 (NT$)</label>
+              <input type="number" value={form.price} onChange={e=>setForm({...form,price:e.target.value})}
+                style={{width:"100%", padding:"10px 12px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", boxSizing:"border-box"}}/>
+            </div>
+          )}
+
+          <div style={{marginBottom:16}}>
+            <label style={{fontSize:13, fontWeight:600, color:"#374151", display:"block", marginBottom:6}}>詳細描述</label>
+            <textarea value={form.description} onChange={e=>setForm({...form,description:e.target.value})} rows={4}
+              style={{width:"100%", padding:"10px 12px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", resize:"vertical", boxSizing:"border-box"}}/>
+          </div>
+
+          <div style={{marginBottom:24}}>
+            <label style={{fontSize:13, fontWeight:600, color:"#374151", display:"block", marginBottom:6}}>聯絡方式</label>
+            <input value={form.contact} onChange={e=>setForm({...form,contact:e.target.value})}
+              style={{width:"100%", padding:"10px 12px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", boxSizing:"border-box"}}/>
+          </div>
+
+          <div style={{display:"flex", gap:10}}>
+            <button type="button" onClick={onClose}
+              style={{flex:1, padding:"12px 0", border:"1.5px solid #e2e8f0", background:"#fff", borderRadius:10, cursor:"pointer", fontWeight:600, color:"#475569"}}>
+              取消
+            </button>
+            <button type="submit" disabled={saving}
+              style={{flex:2, padding:"12px 0", background:"linear-gradient(135deg,#0ea5e9,#0284c7)", color:"#fff", border:"none", borderRadius:10, fontWeight:700, cursor:saving?"not-allowed":"pointer", opacity:saving?0.7:1}}>
+              {saving ? "儲存中…" : "儲存變更"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── 主頁面 ───────────────────────────────────────────────
 export default function ProfilePage({ user, onLogout, favorites, setPage, setSelectedProduct }) {
   const [tab, setTab] = useState("posts");
   const [myPosts, setMyPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
+  const [editingPost, setEditingPost] = useState(null);
 
   const favProducts = PRODUCTS.filter(p => favorites?.has(p.id));
 
@@ -61,8 +166,22 @@ export default function ProfilePage({ user, onLogout, favorites, setPage, setSel
     setDeletingId(null);
   };
 
+  const handleSaved = (updatedPost) => {
+    setMyPosts(ps => ps.map(p => p.id === updatedPost.id ? updatedPost : p));
+    setEditingPost(null);
+  };
+
   return (
     <div style={{maxWidth:960, margin:"0 auto", padding:"32px 20px"}}>
+      {/* Edit Modal */}
+      {editingPost && (
+        <EditModal
+          post={editingPost}
+          onClose={() => setEditingPost(null)}
+          onSaved={handleSaved}
+        />
+      )}
+
       {/* Profile Header */}
       <div style={{background:"linear-gradient(135deg,#0ea5e9,#0284c7)", borderRadius:20, padding:"32px 32px 28px", color:"#fff", marginBottom:28, position:"relative", overflow:"hidden"}}>
         <div style={{position:"absolute", top:-30, right:-30, width:160, height:160, borderRadius:"50%", background:"rgba(255,255,255,.08)"}}/>
@@ -153,10 +272,18 @@ export default function ProfilePage({ user, onLogout, favorites, setPage, setSel
                         </div>
                       </div>
                       {p.price > 0 && <div style={{fontWeight:800, color:"#0ea5e9", fontSize:17, flexShrink:0}}>NT$ {p.price}</div>}
+                      {/* 編輯按鈕 */}
+                      <button
+                        onClick={() => setEditingPost(p)}
+                        style={{padding:"8px 14px", border:"1.5px solid #bae6fd", borderRadius:8, background:"#f0f9ff", cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontSize:13, color:"#0284c7", fontWeight:600, flexShrink:0}}
+                      >
+                        ✏️ 編輯
+                      </button>
+                      {/* 刪除按鈕 */}
                       <button
                         onClick={() => deletePost(p)}
                         disabled={deletingId === p.id}
-                        style={{padding:"8px 14px", border:"1.5px solid #fecaca", borderRadius:8, background:deletingId===p.id?"#f1f5f9":"#fef2f2", cursor:deletingId===p.id?"not-allowed":"pointer", display:"flex", alignItems:"center", gap:5, fontSize:13, color:"#ef4444", fontWeight:600, opacity:deletingId===p.id?.5:1, flexShrink:0}}
+                        style={{padding:"8px 14px", border:"1.5px solid #fecaca", borderRadius:8, background:deletingId===p.id?"#f1f5f9":"#fef2f2", cursor:deletingId===p.id?"not-allowed":"pointer", display:"flex", alignItems:"center", gap:5, fontSize:13, color:"#ef4444", fontWeight:600, opacity:deletingId===p.id?0.5:1, flexShrink:0}}
                       >
                         <Trash2Icon/>{deletingId===p.id?"刪除中…":"刪除"}
                       </button>
