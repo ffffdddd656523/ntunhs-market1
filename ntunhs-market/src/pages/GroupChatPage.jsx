@@ -105,7 +105,7 @@ export default function GroupChatPage({ user }) {
         </div>
         <div>
           <div style={{ fontWeight: 800, fontSize: 16, color: "#1e293b" }}>北護大群</div>
-          <div style={{ fontSize: 12, color: "#64748b" }}>北護 Market 公開討論群組 · 全校學生皆可參與</div>
+          <div style={{ fontSize: 12, color: "#64748b" }}>北護校園資訊整合平台 公開討論群組 · 全校學生皆可參與</div>
         </div>
         <div style={{ marginLeft: "auto", background: "#dcfce7", color: "#16a34a", fontSize: 12, fontWeight: 600, padding: "4px 10px", borderRadius: 99 }}>
           ● 138 人在線

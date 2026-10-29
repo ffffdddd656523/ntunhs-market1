@@ -53,7 +53,7 @@ export default function Navbar({ page, setPage, goBack, goForward, canGoForward,
           <div style={{width:40, height:40, background:"linear-gradient(135deg, #0ea5e9, #0284c7)", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center"}}>
             <span style={{color:"#fff", fontSize:18, fontWeight:700}}>市</span>
           </div>
-          <span style={{fontSize:16, fontWeight:700, color:"#1e293b"}}>北護 Market</span>
+          <span style={{fontSize:16, fontWeight:700, color:"#1e293b"}}>北護校園資訊整合平台</span>
           </button>
         </div>
 

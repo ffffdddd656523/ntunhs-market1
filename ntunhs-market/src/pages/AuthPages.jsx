@@ -68,7 +68,7 @@ export function LoginPage({ setPage, onLogin }) {
         <div style={{textAlign:"center", marginBottom:28}}>
           <div style={{width:56, height:56, borderRadius:14, background:"linear-gradient(135deg,#0ea5e9,#0284c7)", display:"inline-flex", alignItems:"center", justifyContent:"center", color:"#fff", fontWeight:900, fontSize:22, marginBottom:12}}>市</div>
           <h2 style={{fontSize:22, fontWeight:800, color:"#1e293b"}}>歡迎回來</h2>
-          <p style={{color:"#64748b", fontSize:14}}>登入北護 Market 帳號</p>
+          <p style={{color:"#64748b", fontSize:14}}>登入北護校園資訊整合平台 帳號</p>
         </div>
 
         {error && (
@@ -193,7 +193,7 @@ export function RegisterPage({ setPage, onLogin }) {
       <div style={{width:"100%", maxWidth:460, background:"#fff", borderRadius:20, padding:"40px 36px", boxShadow:"0 4px 24px rgba(0,0,0,.09)"}}>
         <div style={{textAlign:"center", marginBottom:6}}>
           <div style={{width:50, height:50, borderRadius:12, background:"linear-gradient(135deg,#0ea5e9,#0284c7)", display:"inline-flex", alignItems:"center", justifyContent:"center", color:"#fff", fontWeight:900, fontSize:20, marginBottom:10}}>市</div>
-          <h2 style={{fontSize:22, fontWeight:800, color:"#1e293b"}}>加入北護 Market</h2>
+          <h2 style={{fontSize:22, fontWeight:800, color:"#1e293b"}}>加入北護校園資訊整合平台</h2>
         </div>
 
         {/* Step Indicator */}

@@ -8,7 +8,7 @@ export default function Footer({ setPage }) {
               <div style={{width:36, height:36, background:"#0ea5e9", borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center"}}>
                 <span style={{color:"#fff", fontWeight:700}}>北</span>
               </div>
-              <span style={{color:"#f1f5f9", fontWeight:700, fontSize:15}}>北護 Market</span>
+              <span style={{color:"#f1f5f9", fontWeight:700, fontSize:15}}>北護校園資訊整合平台</span>
             </div>
             <p style={{fontSize:13, lineHeight:1.8}}>專為臺北護理健康大學學生設計的二手交易與資訊交流平台。</p>
           </div>
@@ -31,7 +31,7 @@ export default function Footer({ setPage }) {
           </div>
         </div>
         <div style={{borderTop:"1px solid #334155", paddingTop:20, textAlign:"center", fontSize:12}}>
-          © 2026 北護 Market。本平台僅限北護大學在學學生使用。
+          © 2026 北護校園資訊整合平台。本平台僅限北護大學在學學生使用。
         </div>
       </div>
     </footer>
