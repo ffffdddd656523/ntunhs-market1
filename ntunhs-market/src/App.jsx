@@ -168,8 +168,8 @@ export default function App() {
         return <CourseListPage />;
       case 'create':
         return <CreatePostPage setPage={navigate} isLoggedIn={!!user} user={user} />;
-      case 'chat':
-        return <ChatPage />;
+     case 'chat':
+  return <ChatPage user={user} />;
       case 'group-chat':
         return <GroupChatPage user={user} />;
       case 'visual-search':
