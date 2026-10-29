@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
+import { findOrCreateConversation } from './chatUtils';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
@@ -133,7 +134,22 @@ export default function App() {
     navigate('product-detail');
   };
 
-  const goToChat = () => navigate('chat');
+  // 聯絡賣家：自動建立對話再跳轉到聊天室
+  const goToChat = async () => {
+    if (user && selectedProduct) {
+      const sellerUid  = selectedProduct.authorId || selectedProduct.userId || selectedProduct.uid;
+      const sellerName = selectedProduct.authorName || selectedProduct.sellerName || '賣家';
+      const myName     = user.name || user.email?.split('@')[0] || '買家';
+      if (sellerUid && sellerUid !== user.uid) {
+        try {
+          await findOrCreateConversation(user.uid, myName, sellerUid, sellerName);
+        } catch (e) {
+          console.error('建立對話失敗', e);
+        }
+      }
+    }
+    navigate('chat');
+  };
 
   const renderPage = () => {
     switch (page) {
@@ -168,8 +184,8 @@ export default function App() {
         return <CourseListPage />;
       case 'create':
         return <CreatePostPage setPage={navigate} isLoggedIn={!!user} user={user} />;
-     case 'chat':
-  return <ChatPage user={user} />;
+      case 'chat':
+        return <ChatPage user={user} />;
       case 'group-chat':
         return <GroupChatPage user={user} />;
       case 'visual-search':
