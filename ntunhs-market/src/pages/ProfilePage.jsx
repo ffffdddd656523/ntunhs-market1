@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Trash2Icon, ShoppingBagIcon, BriefcaseIcon, RefreshIcon } from '../components/Icons';
 import { Avatar, ProductCard } from '../components/Common';
-import { PRODUCTS } from '../data';
 
 const POST_TYPE_MAP = { product: "products", job: "jobs", course: "courses" };
 const POST_LABEL   = { product: "商品", job: "打工", course: "換課" };
@@ -128,7 +127,20 @@ export default function ProfilePage({ user, onLogout, favorites, setPage, setSel
   const [deletingId, setDeletingId] = useState(null);
   const [editingPost, setEditingPost] = useState(null);
 
-  const favProducts = PRODUCTS.filter(p => favorites?.has(p.id));
+  const [favProducts, setFavProducts] = useState([]);
+
+  // 從 Firestore 讀取收藏商品
+  useEffect(() => {
+    if (!favorites || favorites.size === 0) { setFavProducts([]); return; }
+    const ids = [...favorites];
+    Promise.all(
+      ids.map(id =>
+        getDoc(doc(db, 'products', id))
+          .then(snap => snap.exists() ? { id: snap.id, ...snap.data() } : null)
+          .catch(() => null)
+      )
+    ).then(results => setFavProducts(results.filter(Boolean)));
+  }, [favorites]);
 
   // Pull user's real posts from all 3 Firestore collections
   useEffect(() => {
