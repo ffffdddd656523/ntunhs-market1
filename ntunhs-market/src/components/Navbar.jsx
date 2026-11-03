@@ -35,6 +35,7 @@ export default function Navbar({ page, setPage, goBack, goForward, canGoForward,
     {id:"courses", label:"換課資訊"},
     {id:"create", label:"發布貼文"},
     {id:"group-chat", label:"北護大群"},
+    {id:"activities", label:"🤝 揪友"},
     ...(isLoggedIn ? [{id:"chat", label:"💬 私訊"}] : []),
   ];
 

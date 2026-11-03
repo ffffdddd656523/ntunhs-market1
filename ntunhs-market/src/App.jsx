@@ -18,6 +18,7 @@ import { LoginPage, RegisterPage } from './pages/AuthPages';
 import ProfilePage from './pages/ProfilePage';
 import AdminPage from './pages/AdminPage';
 import SeedTool from './pages/SeedTool';
+import ActivityListPage from './pages/ActivityListPage';
 
 // ── 路由對照表 ──────────────────────────────────────────
 const PAGE_TO_PATH = {
@@ -28,6 +29,7 @@ const PAGE_TO_PATH = {
   'courses':        '/courses',
   'create':         '/create',
   'chat':           '/chat',
+  'activities':     '/activities',
   'group-chat':     '/group-chat',
   'visual-search':  '/visual-search',
   'login':          '/login',
@@ -186,6 +188,8 @@ export default function App() {
         return <CreatePostPage setPage={navigate} isLoggedIn={!!user} user={user} />;
       case 'chat':
         return <ChatPage user={user} />;
+      case 'activities':
+        return <ActivityListPage user={user} />;
       case 'group-chat':
         return <GroupChatPage user={user} />;
       case 'visual-search':

@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { XIcon, UploadIcon } from '../components/Icons';
 
 export default function CreatePostPage({ setPage, isLoggedIn, user }) {
-  const [form, setForm] = useState({type:"product", title:"", category:"", price:"", description:"", contact:""});
+  const [form, setForm] = useState({type:"product", title:"", category:"", price:"", description:"", contact:"", activityDate:"", activityTime:"", location:"", maxParticipants:""});
   const [img, setImg] = useState(null);
   const [submitted, setSubmitted] = useState(false);
   const [submittedType, setSubmittedType] = useState("product");
@@ -15,7 +15,7 @@ export default function CreatePostPage({ setPage, isLoggedIn, user }) {
   // 發布成功後 3 秒自動跳轉
   useEffect(() => {
     if (!submitted) return;
-    const dest = submittedType === "product" ? "products" : submittedType === "job" ? "jobs" : "courses";
+    const dest = submittedType === "product" ? "products" : submittedType === "job" ? "jobs" : submittedType === "activity" ? "activities" : "courses";
     if (countdown <= 0) { setPage(dest); return; }
     const t = setTimeout(() => setCountdown(c => c - 1), 1000);
     return () => clearTimeout(t);
@@ -35,11 +35,10 @@ export default function CreatePostPage({ setPage, isLoggedIn, user }) {
     setLoading(true);
     setError("");
     try {
-      const collectionName = form.type === "product" ? "products" : form.type === "job" ? "jobs" : "courses";
-      await addDoc(collection(db, collectionName), {
+      const collectionName = form.type === "product" ? "products" : form.type === "job" ? "jobs" : form.type === "activity" ? "activities" : "courses";
+      const payload = {
         title: form.title,
         category: form.category,
-        price: form.type === "product" ? Number(form.price) : null,
         description: form.description,
         contact: form.contact,
         type: form.type,
@@ -49,7 +48,16 @@ export default function CreatePostPage({ setPage, isLoggedIn, user }) {
         authorEmail: user?.email || "",
         createdAt: new Date().toISOString(),
         likes: 0,
-      });
+      };
+      if (form.type === "product") payload.price = Number(form.price);
+      if (form.type === "activity") {
+        payload.activityDate = form.activityDate;
+        payload.activityTime = form.activityTime;
+        payload.location = form.location;
+        payload.maxParticipants = form.maxParticipants ? Number(form.maxParticipants) : 0;
+        payload.participants = [];
+      }
+      await addDoc(collection(db, collectionName), payload);
       setSubmittedType(form.type);
       setSubmitted(true);
     } catch (err) {
@@ -70,8 +78,8 @@ export default function CreatePostPage({ setPage, isLoggedIn, user }) {
   );
 
   if (submitted) {
-    const dest = submittedType === "product" ? "products" : submittedType === "job" ? "jobs" : "courses";
-    const destLabel = submittedType === "product" ? "瀏覽商品" : submittedType === "job" ? "打工資訊" : "換課資訊";
+    const dest = submittedType === "product" ? "products" : submittedType === "job" ? "jobs" : submittedType === "activity" ? "activities" : "courses";
+    const destLabel = submittedType === "product" ? "瀏覽商品" : submittedType === "job" ? "打工資訊" : submittedType === "activity" ? "揪友平台" : "換課資訊";
     return (
       <div style={{maxWidth:500, margin:"80px auto", textAlign:"center", padding:"0 20px"}}>
         <div style={{fontSize:60, marginBottom:16}}>🎉</div>
@@ -82,7 +90,7 @@ export default function CreatePostPage({ setPage, isLoggedIn, user }) {
           <button onClick={()=>setPage(dest)} style={{background:"linear-gradient(135deg,#0ea5e9,#0284c7)", color:"#fff", border:"none", padding:"12px 24px", borderRadius:10, cursor:"pointer", fontWeight:700}}>
             {destLabel}
           </button>
-          <button onClick={()=>{setForm({type:"product",title:"",category:"",price:"",description:"",contact:""});setImg(null);setSubmitted(false);setCountdown(3)}} style={{background:"#f1f5f9", color:"#475569", border:"none", padding:"12px 24px", borderRadius:10, cursor:"pointer", fontWeight:600}}>
+          <button onClick={()=>{setForm({type:"product",title:"",category:"",price:"",description:"",contact:"",activityDate:"",activityTime:"",location:"",maxParticipants:""});setImg(null);setSubmitted(false);setCountdown(3)}} style={{background:"#f1f5f9", color:"#475569", border:"none", padding:"12px 24px", borderRadius:10, cursor:"pointer", fontWeight:600}}>
             再發一篇
           </button>
         </div>
@@ -94,24 +102,26 @@ export default function CreatePostPage({ setPage, isLoggedIn, user }) {
     ? ["書籍","彩妝","衣服","生活用品"]
     : form.type==="job"
     ? ["校內工讀","校外兼職","實習機會"]
+    : form.type==="activity"
+    ? ["揪吃飯","揪讀書","揪運動","揪出遊","其他"]
     : ["必修課程","選修課程"];
 
   return (
     <div style={{maxWidth:680, margin:"0 auto", padding:"32px 20px"}}>
       <h1 style={{fontSize:26, fontWeight:800, color:"#1e293b", marginBottom:6}}>發布貼文</h1>
-      <p style={{color:"#64748b", marginBottom:28}}>分享你的商品、打工資訊或換課需求</p>
+      <p style={{color:"#64748b", marginBottom:28}}>分享你的商品、打工資訊、換課需求或揪友活動</p>
 
       <form onSubmit={handleSubmit} style={{background:"#fff", borderRadius:18, padding:"32px 28px", boxShadow:"0 2px 14px rgba(0,0,0,.07)"}}>
         {/* Type Selector */}
         <div style={{marginBottom:22}}>
           <label style={{fontSize:14, fontWeight:600, color:"#374151", display:"block", marginBottom:8}}>貼文類型 *</label>
-          <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10}}>
-            {[["product","商品販售"],["job","打工資訊"],["course","換課資訊"]].map(([v,l]) => (
+          <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:10}}>
+            {[["product","商品販售"],["job","打工資訊"],["course","換課資訊"],["activity","揪友活動"]].map(([v,l]) => (
               <button
                 type="button"
                 key={v}
                 onClick={() => setForm({...form, type:v, category:""})}
-                style={{padding:"12px 0", borderRadius:10, border:`2px solid ${form.type===v?"#0ea5e9":"#e2e8f0"}`, background:form.type===v?"#e0f2fe":"#fff", color:form.type===v?"#0284c7":"#475569", fontWeight:600, cursor:"pointer", fontSize:14, transition:"all .15s"}}
+                style={{padding:"12px 0", borderRadius:10, border:`2px solid ${form.type===v?(v==="activity"?"#f59e0b":"#0ea5e9"):"#e2e8f0"}`, background:form.type===v?(v==="activity"?"#fef3c7":"#e0f2fe"):"#fff", color:form.type===v?(v==="activity"?"#b45309":"#0284c7"):"#475569", fontWeight:600, cursor:"pointer", fontSize:14, transition:"all .15s"}}
               >
                 {l}
               </button>
@@ -141,6 +151,30 @@ export default function CreatePostPage({ setPage, isLoggedIn, user }) {
             <input required type="number" value={form.price} onChange={e=>setForm({...form,price:e.target.value})} placeholder="請輸入價格" style={{width:"100%", padding:"11px 14px", border:"1px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", boxSizing:"border-box"}}/>
           </div>
         )}
+
+        {/* Activity fields */}
+        {form.type === "activity" && (<>
+          <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:18}}>
+            <div>
+              <label style={{fontSize:14, fontWeight:600, color:"#374151", display:"block", marginBottom:6}}>活動日期 *</label>
+              <input required type="date" value={form.activityDate} onChange={e=>setForm({...form,activityDate:e.target.value})} style={{width:"100%", padding:"11px 14px", border:"1px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", boxSizing:"border-box"}}/>
+            </div>
+            <div>
+              <label style={{fontSize:14, fontWeight:600, color:"#374151", display:"block", marginBottom:6}}>活動時間 *</label>
+              <input required type="time" value={form.activityTime} onChange={e=>setForm({...form,activityTime:e.target.value})} style={{width:"100%", padding:"11px 14px", border:"1px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", boxSizing:"border-box"}}/>
+            </div>
+          </div>
+          <div style={{display:"grid", gridTemplateColumns:"2fr 1fr", gap:14, marginBottom:18}}>
+            <div>
+              <label style={{fontSize:14, fontWeight:600, color:"#374151", display:"block", marginBottom:6}}>地點 *</label>
+              <input required value={form.location} onChange={e=>setForm({...form,location:e.target.value})} placeholder="例如：圖書館、學餐" style={{width:"100%", padding:"11px 14px", border:"1px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", boxSizing:"border-box"}}/>
+            </div>
+            <div>
+              <label style={{fontSize:14, fontWeight:600, color:"#374151", display:"block", marginBottom:6}}>人數上限</label>
+              <input type="number" min="1" value={form.maxParticipants} onChange={e=>setForm({...form,maxParticipants:e.target.value})} placeholder="無限制留空" style={{width:"100%", padding:"11px 14px", border:"1px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", boxSizing:"border-box"}}/>
+            </div>
+          </div>
+        </>)}
 
         {/* Description */}
         <div style={{marginBottom:18}}>
